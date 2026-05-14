@@ -1,5 +1,6 @@
 import { requireAdmin } from "@/lib/auth";
 import { UserButton } from "@clerk/nextjs";
+import { AdminNav } from "./_nav";
 
 export default async function AdminLayout({
   children,
@@ -13,7 +14,10 @@ export default async function AdminLayout({
         <h1 className="font-semibold">Gym Admin</h1>
         <UserButton />
       </header>
-      <main className="flex-1 p-6">{children}</main>
+      <div className="flex-1 flex">
+        <AdminNav />
+        <main className="flex-1 p-6">{children}</main>
+      </div>
     </div>
   );
 }
