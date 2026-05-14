@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
-import { getCloudflareContext } from "@opennextjs/cloudflare";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -19,26 +18,13 @@ export const metadata: Metadata = {
   description: "Single-gym membership, payments, and check-in.",
 };
 
-function readEnv(key: string): string | undefined {
-  try {
-    const ctx = getCloudflareContext();
-    const v = (ctx?.env as Record<string, unknown> | undefined)?.[key];
-    if (typeof v === "string" && v.length > 0) return v;
-  } catch {
-    // not running in a CF request context (local dev / build-time)
-  }
-  return process.env[key];
-}
-
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const publishableKey = readEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY");
-
   return (
-    <ClerkProvider publishableKey={publishableKey}>
+    <ClerkProvider>
       <html
         lang="en"
         className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
