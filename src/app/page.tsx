@@ -6,12 +6,10 @@ export default function Home() {
     <main className="min-h-screen flex flex-col gap-4 items-center justify-center">
       <h1 className="text-3xl font-semibold">Gym Management</h1>
       <div className="flex gap-3">
-        <Link href="/sign-in">
-          <Button>Sign in</Button>
-        </Link>
-        <Link href="/sign-up">
-          <Button variant="outline">Sign up</Button>
-        </Link>
+        <Button render={<Link href="/sign-in" />}>Sign in</Button>
+        <Button render={<Link href="/sign-up" />} variant="outline">
+          Sign up
+        </Button>
       </div>
     </main>
   );
