@@ -102,4 +102,31 @@ describe("signKioskToken / verifyKioskToken", () => {
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.reason).toBe("malformed");
   });
+
+  it("rejects empty iat segment as malformed (not invalid_signature)", async () => {
+    const result = await verifyKioskToken({
+      token: "main..somesig",
+      now: new Date(),
+      secret: SECRET,
+      maxAgeSeconds: 24 * 60 * 60,
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.reason).toBe("malformed");
+  });
+
+  it("rejects non-decimal iat (hex, scientific notation, whitespace) as malformed", async () => {
+    const cases = ["0x10", "1.5e3", " 1234 ", "-1", "1.0"];
+    for (const iatStr of cases) {
+      const result = await verifyKioskToken({
+        token: `main.${iatStr}.somesig`,
+        now: new Date(),
+        secret: SECRET,
+        maxAgeSeconds: 24 * 60 * 60,
+      });
+      expect(result.ok, `iatStr=${JSON.stringify(iatStr)}`).toBe(false);
+      if (!result.ok) {
+        expect(result.reason, `iatStr=${JSON.stringify(iatStr)}`).toBe("malformed");
+      }
+    }
+  });
 });

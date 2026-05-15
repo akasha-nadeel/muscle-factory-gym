@@ -82,10 +82,10 @@ export async function verifyKioskToken(input: {
   const parts = input.token.split(".");
   if (parts.length !== 3) return { ok: false, reason: "malformed" };
   const [kioskId, iatStr, sigB64] = parts;
-  const iat = Number(iatStr);
-  if (!kioskId || !Number.isFinite(iat) || !sigB64) {
+  if (!kioskId || !sigB64 || !/^\d+$/.test(iatStr)) {
     return { ok: false, reason: "malformed" };
   }
+  const iat = Number(iatStr);
 
   const expectedSig = await hmac(input.secret, `${kioskId}.${iat}`);
   let providedSig: Uint8Array;
