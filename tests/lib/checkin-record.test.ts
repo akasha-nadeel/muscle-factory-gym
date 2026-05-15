@@ -12,6 +12,7 @@ const PLAN_NAME = "Phase3RecordPlan";
 
 let memberId: string;
 let planId: string;
+let membershipId: string;
 
 async function clean() {
   const members = await db
@@ -47,13 +48,17 @@ beforeEach(async () => {
     })
     .returning();
   memberId = m.id;
-  await db.insert(memberships).values({
-    memberId,
-    planId,
-    startDate: "2026-05-01",
-    endDate: "2026-06-30",
-    status: "active",
-  });
+  const [mem] = await db
+    .insert(memberships)
+    .values({
+      memberId,
+      planId,
+      startDate: "2026-05-01",
+      endDate: "2026-06-30",
+      status: "active",
+    })
+    .returning();
+  membershipId = mem.id;
 });
 
 afterEach(clean);
@@ -73,6 +78,7 @@ describe("_recordAttendanceByGymIdUnsafe", () => {
       .where(eq(attendance.memberId, memberId));
     expect(rows.length).toBe(1);
     expect(rows[0].source).toBe("kiosk_id");
+    expect(rows[0].membershipId).toBe(membershipId);
   });
 
   it("rejects unknown gym_id with not_found", async () => {

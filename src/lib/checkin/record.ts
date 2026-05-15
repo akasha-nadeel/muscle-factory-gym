@@ -1,24 +1,30 @@
 import { db } from "@/db";
 import { profiles, memberships, plans, attendance } from "@/db/schema";
-import { eq, and, gte, lte, sql } from "drizzle-orm";
+import { eq, and, gte, lt, sql } from "drizzle-orm";
+import { addDays, format, parseISO } from "date-fns";
 import { evaluateCheckin, type CheckinResult } from "./evaluate";
 
 type Source = "kiosk_id" | "qr_scan" | "manual";
 
 /**
- * SL-local day window expressed as a UTC range:
+ * SL-local day window expressed as a UTC range, half-open:
  *  [todaySL 00:00 +05:30, todaySL+1 00:00 +05:30)
- * = [todaySL 18:30 UTC the previous calendar day, todaySL 18:30 UTC]
- * Postgres handles the timestamptz comparison correctly when we pass
- * the literal `YYYY-MM-DD 00:00:00+05:30` string.
+ *
+ * fromUtc = start of `todaySL` in SL time.
+ * toUtc   = start of the next calendar day in SL time (exclusive).
+ *
+ * The half-open interval avoids ambiguity at the SL-midnight boundary:
+ * a row stamped at exactly that instant belongs to the next day's window,
+ * not this one.
  */
 function slDayWindow(todaySL: string): {
   fromUtc: string;
-  toUtc: string;
+  toUtcExclusive: string;
 } {
+  const next = format(addDays(parseISO(todaySL), 1), "yyyy-MM-dd");
   return {
     fromUtc: `${todaySL} 00:00:00+05:30`,
-    toUtc: `${todaySL} 24:00:00+05:30`,
+    toUtcExclusive: `${next} 00:00:00+05:30`,
   };
 }
 
@@ -48,7 +54,7 @@ async function loadAndEvaluate(input: {
     .innerJoin(plans, eq(memberships.planId, plans.id))
     .where(eq(memberships.memberId, m.id));
 
-  const { fromUtc, toUtc } = slDayWindow(input.todaySL);
+  const { fromUtc, toUtcExclusive } = slDayWindow(input.todaySL);
   const todays = await db
     .select({ id: attendance.id, checkedInAt: attendance.checkedInAt })
     .from(attendance)
@@ -56,7 +62,7 @@ async function loadAndEvaluate(input: {
       and(
         eq(attendance.memberId, m.id),
         gte(attendance.checkedInAt, sql`${fromUtc}::timestamptz`),
-        lte(attendance.checkedInAt, sql`${toUtc}::timestamptz`),
+        lt(attendance.checkedInAt, sql`${toUtcExclusive}::timestamptz`),
       ),
     );
 
