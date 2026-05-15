@@ -9,7 +9,12 @@ import { sql } from "drizzle-orm";
  * Pass a transaction (`tx`) when calling from inside `db.transaction(...)`,
  * otherwise pass the default `db` import.
  */
-type DbLike = typeof defaultDb;
+// Accept either the default db OR a transaction handle from db.transaction(...).
+// Derived from the transaction callback's parameter so it stays correct if
+// Drizzle's transaction signature evolves.
+type DbLike =
+  | typeof defaultDb
+  | Parameters<Parameters<typeof defaultDb["transaction"]>[0]>[0];
 
 export async function _assignNextGymIdUnsafe(dbOrTx: DbLike): Promise<number> {
   const rows = await dbOrTx
