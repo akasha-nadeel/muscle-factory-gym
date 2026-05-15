@@ -1,28 +1,35 @@
 "use server";
 
 import { db } from "@/db";
-import { profiles, plans, memberships } from "@/db/schema";
+import { profiles, plans, memberships, payments } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { clerkClient } from "@clerk/nextjs/server";
 import { format } from "date-fns";
 import { requireAdminProfile } from "@/lib/auth";
 import { computeMembershipWindow } from "@/lib/memberships/window";
+import { validatePaymentInput } from "@/lib/payments/validate";
+
+export type ApprovePaymentInput = {
+  amountLkr: string;
+  method: "cash" | "bank_transfer";
+  reference: string;
+  notes: string;
+};
 
 export type ApproveInput = {
   memberId: string;
   planId: string;
   approvedByProfileId: string;
-  today: string; // YYYY-MM-DD
+  today: string;
+  /** Optional: record an initial membership payment in the same transaction. */
+  initialMembershipPayment?: ApprovePaymentInput;
+  /** Optional: record an admission fee in the same transaction. */
+  admissionFee?: ApprovePaymentInput;
 };
 
 export type ApproveResult = { ok: true } | { ok: false; error: string };
 
-/**
- * Test-only helper: no auth gate, no Clerk metadata sync.
- * Phase 1 NOTE: this does NOT insert a payments row. Approval here means
- * "I trust this person and gave them a plan" — payment recording is Phase 2.
- */
 export async function _approveMemberUnsafe(input: ApproveInput): Promise<ApproveResult> {
   const [member] = await db.select().from(profiles).where(eq(profiles.id, input.memberId)).limit(1);
   if (!member) return { ok: false, error: "Member not found" };
@@ -32,25 +39,102 @@ export async function _approveMemberUnsafe(input: ApproveInput): Promise<Approve
   if (!plan) return { ok: false, error: "Plan not found" };
   if (!plan.isActive) return { ok: false, error: "Plan is disabled" };
 
+  // Validate any optional payments BEFORE opening the transaction so we never
+  // create a half-rolled-back state for bad input.
+  if (input.initialMembershipPayment) {
+    const v = validatePaymentInput({
+      amountLkr: input.initialMembershipPayment.amountLkr,
+      method: input.initialMembershipPayment.method,
+      kind: "membership",
+      reference: input.initialMembershipPayment.reference,
+      notes: input.initialMembershipPayment.notes,
+    });
+    if (!v.ok) return { ok: false, error: "Membership payment is invalid" };
+  }
+  if (input.admissionFee) {
+    const v = validatePaymentInput({
+      amountLkr: input.admissionFee.amountLkr,
+      method: input.admissionFee.method,
+      kind: "admission",
+      reference: input.admissionFee.reference,
+      notes: input.admissionFee.notes,
+    });
+    if (!v.ok) return { ok: false, error: "Admission fee is invalid" };
+  }
+
   const window = computeMembershipWindow({
     today: input.today,
     durationDays: plan.durationDays,
   });
 
-  await db.transaction(async (tx) => {
-    await tx.insert(memberships).values({
-      memberId: input.memberId,
-      planId: input.planId,
-      startDate: window.startDate,
-      endDate: window.endDate,
-      status: "active",
-      createdBy: input.approvedByProfileId,
+  try {
+    await db.transaction(async (tx) => {
+      const [created] = await tx
+        .insert(memberships)
+        .values({
+          memberId: input.memberId,
+          planId: input.planId,
+          startDate: window.startDate,
+          endDate: window.endDate,
+          status: "active",
+          createdBy: input.approvedByProfileId,
+        })
+        .returning({ id: memberships.id });
+
+      await tx
+        .update(profiles)
+        .set({ status: "active" })
+        .where(eq(profiles.id, input.memberId));
+
+      if (input.initialMembershipPayment) {
+        const v = validatePaymentInput({
+          amountLkr: input.initialMembershipPayment.amountLkr,
+          method: input.initialMembershipPayment.method,
+          kind: "membership",
+          reference: input.initialMembershipPayment.reference,
+          notes: input.initialMembershipPayment.notes,
+        });
+        if (v.ok) {
+          await tx.insert(payments).values({
+            memberId: input.memberId,
+            membershipId: created.id,
+            amountLkr: v.value.amountLkr,
+            method: v.value.method,
+            kind: "membership",
+            status: "succeeded",
+            reference: v.value.reference,
+            notes: v.value.notes,
+            recordedBy: input.approvedByProfileId,
+          });
+        }
+      }
+
+      if (input.admissionFee) {
+        const v = validatePaymentInput({
+          amountLkr: input.admissionFee.amountLkr,
+          method: input.admissionFee.method,
+          kind: "admission",
+          reference: input.admissionFee.reference,
+          notes: input.admissionFee.notes,
+        });
+        if (v.ok) {
+          await tx.insert(payments).values({
+            memberId: input.memberId,
+            membershipId: null,
+            amountLkr: v.value.amountLkr,
+            method: v.value.method,
+            kind: "admission",
+            status: "succeeded",
+            reference: v.value.reference,
+            notes: v.value.notes,
+            recordedBy: input.approvedByProfileId,
+          });
+        }
+      }
     });
-    await tx
-      .update(profiles)
-      .set({ status: "active" })
-      .where(eq(profiles.id, input.memberId));
-  });
+  } catch {
+    return { ok: false, error: "Approval transaction failed" };
+  }
 
   return { ok: true };
 }
@@ -58,6 +142,9 @@ export async function _approveMemberUnsafe(input: ApproveInput): Promise<Approve
 /**
  * Server-action wrapper called from the pending-approvals UI.
  * Calls requireAdminProfile() and mirrors status to Clerk publicMetadata.
+ *
+ * NOTE: This wrapper currently ignores the new payment fields. Task 5 updates
+ * it to forward `includeAdmission` + `includeFirstPayment` from the form.
  */
 export async function approveMember(
   _prev: ApproveResult | undefined,
@@ -77,7 +164,6 @@ export async function approveMember(
   });
 
   if (result.ok) {
-    // Mirror status to Clerk metadata so the middleware sees it on next request.
     const [member] = await db.select().from(profiles).where(eq(profiles.id, memberId)).limit(1);
     if (member) {
       const client = await clerkClient();
