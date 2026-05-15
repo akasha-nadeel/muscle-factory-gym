@@ -42,6 +42,7 @@ export const paymentKindEnum = pgEnum("payment_kind", [
 export const checkinSourceEnum = pgEnum("checkin_source", [
   "qr_scan",
   "manual",
+  "kiosk_id",
 ]);
 
 export const profiles = pgTable(
@@ -55,6 +56,7 @@ export const profiles = pgTable(
     email: text("email").notNull(),
     phone: text("phone"),
     photoUrl: text("photo_url"),
+    gymId: integer("gym_id").unique(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

@@ -22,6 +22,13 @@
       "when": 1778844094870,
       "tag": "0002_parallel_slayback",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1778867640466,
+      "tag": "0003_careless_molly_hayes",
+      "breakpoints": true
     }
   ]
 }
