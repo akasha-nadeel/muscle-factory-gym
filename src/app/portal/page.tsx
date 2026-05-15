@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { requireMemberProfile } from "@/lib/auth";
 import { db } from "@/db";
-import { memberships, plans, payments } from "@/db/schema";
+import { memberships, plans, payments, attendance } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { format } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -70,6 +70,13 @@ export default async function PortalHome() {
     .where(eq(payments.memberId, me.id))
     .orderBy(desc(payments.paidAt));
 
+  const attendanceRows = await db
+    .select()
+    .from(attendance)
+    .where(eq(attendance.memberId, me.id))
+    .orderBy(desc(attendance.checkedInAt))
+    .limit(30);
+
   const outstanding =
     current
       ? computeOutstanding({
@@ -87,7 +94,19 @@ export default async function PortalHome() {
 
   return (
     <div className="space-y-6 max-w-3xl">
-      <h2 className="text-2xl font-semibold">Welcome, {me.fullName}</h2>
+      <div className="flex justify-between items-start">
+        <h2 className="text-2xl font-semibold">Welcome, {me.fullName}</h2>
+        {me.gymId !== null && (
+          <Card className="px-4 py-2">
+            <div className="text-xs text-muted-foreground uppercase tracking-wide">
+              Your Gym ID
+            </div>
+            <div className="text-2xl font-mono font-semibold tabular-nums">
+              {me.gymId}
+            </div>
+          </Card>
+        )}
+      </div>
 
       {outstanding && Number(outstanding) > 0 && (
         <Card className="border-destructive">
@@ -133,6 +152,37 @@ export default async function PortalHome() {
           </CardContent>
         </Card>
       )}
+
+      <div>
+        <h3 className="text-lg font-semibold mb-3">Attendance (last 30)</h3>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-48">Checked in at</TableHead>
+              <TableHead className="w-32">Source</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {attendanceRows.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={2} className="text-center text-muted-foreground py-6">
+                  No check-ins yet. Type your Gym ID at the front-desk kiosk to mark attendance.
+                </TableCell>
+              </TableRow>
+            )}
+            {attendanceRows.map((r) => (
+              <TableRow key={r.id}>
+                <TableCell>{format(r.checkedInAt, "PPp")}</TableCell>
+                <TableCell>
+                  <Badge variant="outline">
+                    {r.source === "kiosk_id" ? "Kiosk" : r.source === "qr_scan" ? "QR scan" : "Manual"}
+                  </Badge>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
 
       <div>
         <h3 className="text-lg font-semibold mb-3">Payment history</h3>
