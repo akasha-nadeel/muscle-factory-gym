@@ -1,4 +1,4 @@
-import { auth, currentUser } from "@clerk/nextjs/server";
+import { auth, clerkClient, currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { profiles } from "@/db/schema";
@@ -89,7 +89,7 @@ async function _syncFromLiveClerkSession(
 ): Promise<Profile> {
   const user = await currentUser();
   if (!user) redirect("/sign-in");
-  return _syncProfileFromClerkUnsafe(
+  const profile = await _syncProfileFromClerkUnsafe(
     clerkUserId,
     {
       primaryEmail:
@@ -101,6 +101,20 @@ async function _syncFromLiveClerkSession(
     },
     process.env.ADMIN_EMAILS,
   );
+  // Mirror role/status to Clerk publicMetadata so the next session JWT
+  // (after the user signs out + back in) carries the right role. The current
+  // request's session claims won't update — we accept that, since this only
+  // matters for first-time admin onboarding without a working webhook.
+  try {
+    const client = await clerkClient();
+    await client.users.updateUserMetadata(clerkUserId, {
+      publicMetadata: { role: profile.role, status: profile.status },
+    });
+  } catch {
+    // Non-fatal: the DB row is authoritative for this request. If Clerk
+    // is down, we still return the profile and let middleware sort it out.
+  }
+  return profile;
 }
 
 /**
