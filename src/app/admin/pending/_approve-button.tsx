@@ -59,7 +59,16 @@ export function ApproveButton({
             <div className="space-y-1.5">
               <Label>Plan</Label>
               <Select value={planId} onValueChange={(v) => setPlanId(v ?? "")}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue>
+                    {(() => {
+                      const p = plans.find((pp) => pp.id === planId);
+                      return p
+                        ? `${p.name} — ${p.durationDays}d — LKR ${Number(p.priceLkr).toLocaleString()}`
+                        : "Select a plan";
+                    })()}
+                  </SelectValue>
+                </SelectTrigger>
                 <SelectContent>
                   {plans.map((p) => (
                     <SelectItem key={p.id} value={p.id}>

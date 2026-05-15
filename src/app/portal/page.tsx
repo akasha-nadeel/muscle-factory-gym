@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { requireMemberProfile } from "@/lib/auth";
 import { db } from "@/db";
 import { memberships, plans } from "@/db/schema";
@@ -10,6 +11,9 @@ import { daysRemaining } from "@/lib/days-remaining";
 
 export default async function PortalHome() {
   const me = await requireMemberProfile();
+
+  // Admins shouldn't see the member portal — bounce them to the admin shell.
+  if (me.role === "admin") redirect("/admin");
 
   if (me.status === "pending") {
     return (

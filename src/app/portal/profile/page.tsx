@@ -11,6 +11,7 @@ export default async function ProfilePage() {
         and update it there.
       </p>
       <ProfileForm
+        key={`${me.fullName}::${me.phone ?? ""}`}
         initial={{ fullName: me.fullName, phone: me.phone ?? "" }}
         email={me.email}
       />
