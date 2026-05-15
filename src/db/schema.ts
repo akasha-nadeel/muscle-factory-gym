@@ -35,6 +35,10 @@ export const paymentStatusEnum = pgEnum("payment_status", [
   "failed",
   "refunded",
 ]);
+export const paymentKindEnum = pgEnum("payment_kind", [
+  "membership",
+  "admission",
+]);
 export const checkinSourceEnum = pgEnum("checkin_source", [
   "qr_scan",
   "manual",
@@ -115,6 +119,7 @@ export const payments = pgTable(
       .references(() => profiles.id, { onDelete: "restrict" }),
     amountLkr: numeric("amount_lkr", { precision: 12, scale: 2 }).notNull(),
     method: paymentMethodEnum("method").notNull(),
+    kind: paymentKindEnum("kind").notNull().default("membership"),
     status: paymentStatusEnum("status").notNull().default("pending"),
     reference: text("reference"),
     paidAt: timestamp("paid_at", { withTimezone: true })
