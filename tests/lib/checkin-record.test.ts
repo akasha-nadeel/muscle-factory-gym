@@ -6,6 +6,7 @@ import {
   _recordAttendanceByGymIdUnsafe,
   _recordAttendanceByMemberIdUnsafe,
 } from "@/lib/checkin/record";
+import { todayInSL } from "@/lib/tz";
 
 const CLERK_PREFIX = "user_phase3_record_";
 const PLAN_NAME = "Phase3RecordPlan";
@@ -54,7 +55,7 @@ beforeEach(async () => {
       memberId,
       planId,
       startDate: "2026-05-01",
-      endDate: "2026-06-30",
+      endDate: "2099-12-31",
       status: "active",
     })
     .returning();
@@ -64,10 +65,11 @@ beforeEach(async () => {
 afterEach(clean);
 
 describe("_recordAttendanceByGymIdUnsafe", () => {
+  const today = todayInSL();
   it("inserts attendance row with source='kiosk_id' on happy path", async () => {
     const r = await _recordAttendanceByGymIdUnsafe({
       gymId: 1100,
-      todaySL: "2026-05-15",
+      todaySL: today,
       source: "kiosk_id",
     });
     expect(r.ok).toBe(true);
@@ -84,7 +86,7 @@ describe("_recordAttendanceByGymIdUnsafe", () => {
   it("rejects unknown gym_id with not_found", async () => {
     const r = await _recordAttendanceByGymIdUnsafe({
       gymId: 9876,
-      todaySL: "2026-05-15",
+      todaySL: today,
       source: "kiosk_id",
     });
     expect(r.ok).toBe(false);
@@ -94,13 +96,13 @@ describe("_recordAttendanceByGymIdUnsafe", () => {
   it("rejects same-day duplicate", async () => {
     const r1 = await _recordAttendanceByGymIdUnsafe({
       gymId: 1100,
-      todaySL: "2026-05-15",
+      todaySL: today,
       source: "kiosk_id",
     });
     expect(r1.ok).toBe(true);
     const r2 = await _recordAttendanceByGymIdUnsafe({
       gymId: 1100,
-      todaySL: "2026-05-15",
+      todaySL: today,
       source: "kiosk_id",
     });
     expect(r2.ok).toBe(false);
@@ -119,7 +121,7 @@ describe("_recordAttendanceByGymIdUnsafe", () => {
       .where(eq(profiles.id, memberId));
     const r = await _recordAttendanceByGymIdUnsafe({
       gymId: 1100,
-      todaySL: "2026-05-15",
+      todaySL: today,
       source: "kiosk_id",
     });
     expect(r.ok).toBe(false);
@@ -129,11 +131,11 @@ describe("_recordAttendanceByGymIdUnsafe", () => {
   it("rejects when membership is expired", async () => {
     await db
       .update(memberships)
-      .set({ status: "expired", endDate: "2026-04-01" })
+      .set({ status: "expired", endDate: "2000-01-01" })
       .where(eq(memberships.memberId, memberId));
     const r = await _recordAttendanceByGymIdUnsafe({
       gymId: 1100,
-      todaySL: "2026-05-15",
+      todaySL: today,
       source: "kiosk_id",
     });
     expect(r.ok).toBe(false);
@@ -142,10 +144,11 @@ describe("_recordAttendanceByGymIdUnsafe", () => {
 });
 
 describe("_recordAttendanceByMemberIdUnsafe", () => {
+  const today = todayInSL();
   it("inserts attendance row with source='qr_scan' for mobile-app path", async () => {
     const r = await _recordAttendanceByMemberIdUnsafe({
       memberId,
-      todaySL: "2026-05-15",
+      todaySL: today,
       source: "qr_scan",
     });
     expect(r.ok).toBe(true);
