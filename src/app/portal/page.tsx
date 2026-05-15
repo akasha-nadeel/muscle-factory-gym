@@ -1,26 +1,28 @@
 import { redirect } from "next/navigation";
 import { requireMemberProfile } from "@/lib/auth";
 import { db } from "@/db";
-import { memberships, plans } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { memberships, plans, payments } from "@/db/schema";
+import { eq, desc } from "drizzle-orm";
 import { format } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from "@/components/ui/table";
 import { getCurrentMembership } from "@/lib/memberships/current";
 import { daysRemaining } from "@/lib/days-remaining";
+import { todayInSL } from "@/lib/tz";
+import { computeOutstanding } from "@/lib/payments/outstanding";
 
 export default async function PortalHome() {
   const me = await requireMemberProfile();
 
-  // Admins shouldn't see the member portal — bounce them to the admin shell.
   if (me.role === "admin") redirect("/admin");
 
   if (me.status === "pending") {
     return (
       <Card className="max-w-md">
-        <CardHeader>
-          <CardTitle>Welcome, {me.fullName} 👋</CardTitle>
-        </CardHeader>
+        <CardHeader><CardTitle>Welcome, {me.fullName} 👋</CardTitle></CardHeader>
         <CardContent className="space-y-3 text-sm text-muted-foreground">
           <p>
             Your account is awaiting approval. The gym staff will activate your
@@ -35,20 +37,17 @@ export default async function PortalHome() {
   if (me.status === "inactive") {
     return (
       <Card className="max-w-md">
-        <CardHeader>
-          <CardTitle>Welcome back, {me.fullName}</CardTitle>
-        </CardHeader>
+        <CardHeader><CardTitle>Welcome back, {me.fullName}</CardTitle></CardHeader>
         <CardContent className="space-y-3 text-sm text-muted-foreground">
           <p>
             Your account is currently inactive (no recent visits). Please drop by
-            the front desk and we'll reactivate your membership.
+            the front desk and we&apos;ll reactivate your membership.
           </p>
         </CardContent>
       </Card>
     );
   }
 
-  // Active member: show current membership.
   const history = await db
     .select({
       id: memberships.id,
@@ -56,17 +55,53 @@ export default async function PortalHome() {
       startDate: memberships.startDate,
       endDate: memberships.endDate,
       planName: plans.name,
+      planPriceLkr: plans.priceLkr,
     })
     .from(memberships)
     .innerJoin(plans, eq(memberships.planId, plans.id))
     .where(eq(memberships.memberId, me.id));
 
-  const today = format(new Date(), "yyyy-MM-dd");
+  const today = todayInSL();
   const current = getCurrentMembership(history, today);
 
+  const paymentRows = await db
+    .select()
+    .from(payments)
+    .where(eq(payments.memberId, me.id))
+    .orderBy(desc(payments.paidAt));
+
+  const outstanding =
+    current
+      ? computeOutstanding({
+          planPriceLkr: current.planPriceLkr,
+          payments: paymentRows.map((p) => ({
+            id: p.id,
+            amountLkr: p.amountLkr,
+            kind: p.kind,
+            status: p.status,
+            membershipId: p.membershipId,
+          })),
+          membershipId: current.id,
+        })
+      : null;
+
   return (
-    <div className="space-y-4 max-w-2xl">
+    <div className="space-y-6 max-w-3xl">
       <h2 className="text-2xl font-semibold">Welcome, {me.fullName}</h2>
+
+      {outstanding && Number(outstanding) > 0 && (
+        <Card className="border-destructive">
+          <CardHeader>
+            <CardTitle className="text-destructive">
+              Outstanding balance: LKR {Number(outstanding).toLocaleString()}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm text-muted-foreground">
+            Please visit the front desk to settle the balance.
+          </CardContent>
+        </Card>
+      )}
+
       {current ? (
         <Card>
           <CardHeader>
@@ -84,19 +119,63 @@ export default async function PortalHome() {
               <span className="text-muted-foreground">Days remaining:</span>{" "}
               {Math.max(0, daysRemaining({ today, endDate: current.endDate }))}
             </div>
+            <div>
+              <span className="text-muted-foreground">Plan price:</span>{" "}
+              LKR {Number(current.planPriceLkr).toLocaleString()}
+            </div>
           </CardContent>
         </Card>
       ) : (
         <Card>
-          <CardHeader>
-            <CardTitle>No active membership</CardTitle>
-          </CardHeader>
+          <CardHeader><CardTitle>No active membership</CardTitle></CardHeader>
           <CardContent className="text-sm text-muted-foreground">
-            Please visit the front desk to renew, or wait for the online payment
-            option (coming soon).
+            Please visit the front desk to renew, or wait for the online payment option (coming soon).
           </CardContent>
         </Card>
       )}
+
+      <div>
+        <h3 className="text-lg font-semibold mb-3">Payment history</h3>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-32">Paid at</TableHead>
+              <TableHead className="w-28">Kind</TableHead>
+              <TableHead className="w-28">Method</TableHead>
+              <TableHead className="w-32 text-right">Amount (LKR)</TableHead>
+              <TableHead className="w-32">Status</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {paymentRows.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center text-muted-foreground py-6">
+                  No payments yet.
+                </TableCell>
+              </TableRow>
+            )}
+            {paymentRows.map((p) => {
+              const num = Number(p.amountLkr);
+              return (
+                <TableRow key={p.id} className={p.status === "refunded" ? "opacity-70" : ""}>
+                  <TableCell>{format(p.paidAt, "PP")}</TableCell>
+                  <TableCell>{p.kind}</TableCell>
+                  <TableCell>{p.method}</TableCell>
+                  <TableCell className="text-right">
+                    {num < 0 ? "-" : ""}
+                    {Math.abs(num).toLocaleString()}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={p.status === "succeeded" ? "default" : "outline"}>
+                      {p.status}
+                    </Badge>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 }
