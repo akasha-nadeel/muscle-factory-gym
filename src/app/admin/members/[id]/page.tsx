@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { db } from "@/db";
-import { profiles, memberships, plans } from "@/db/schema";
+import { profiles, memberships, plans, payments } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { requireAdminProfile } from "@/lib/auth";
 import { getCurrentMembership } from "@/lib/memberships/current";
@@ -15,6 +15,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { format } from "date-fns";
+import { todayInSL } from "@/lib/tz";
+import { computeOutstanding } from "@/lib/payments/outstanding";
+import { PaymentsTable } from "./_payments-table";
+import { RecordPaymentButton } from "./_record-payment-button";
 
 export default async function MemberDetailPage({
   params,
@@ -38,15 +42,41 @@ export default async function MemberDetailPage({
       startDate: memberships.startDate,
       endDate: memberships.endDate,
       planName: plans.name,
-      planDuration: plans.durationDays,
+      planPriceLkr: plans.priceLkr,
     })
     .from(memberships)
     .innerJoin(plans, eq(memberships.planId, plans.id))
     .where(eq(memberships.memberId, id))
     .orderBy(desc(memberships.endDate));
 
-  const today = format(new Date(), "yyyy-MM-dd");
+  const today = todayInSL();
   const current = getCurrentMembership(history, today);
+
+  const paymentRows = await db
+    .select()
+    .from(payments)
+    .where(eq(payments.memberId, id))
+    .orderBy(desc(payments.paidAt));
+
+  const refundedReferences = new Set(
+    paymentRows
+      .filter((p) => p.status === "refunded" && p.reference)
+      .map((p) => p.reference!),
+  );
+
+  const outstanding = current
+    ? computeOutstanding({
+        planPriceLkr: current.planPriceLkr,
+        payments: paymentRows.map((p) => ({
+          id: p.id,
+          amountLkr: p.amountLkr,
+          kind: p.kind,
+          status: p.status,
+          membershipId: p.membershipId,
+        })),
+        membershipId: current.id,
+      })
+    : null;
 
   return (
     <div className="space-y-6">
@@ -89,7 +119,14 @@ export default async function MemberDetailPage({
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Current membership</CardTitle>
+            <CardTitle className="flex justify-between items-center">
+              <span>Current membership</span>
+              {outstanding && Number(outstanding) > 0 && (
+                <Badge variant="destructive">
+                  Outstanding: LKR {Number(outstanding).toLocaleString()}
+                </Badge>
+              )}
+            </CardTitle>
           </CardHeader>
           <CardContent className="text-sm">
             {current ? (
@@ -99,12 +136,30 @@ export default async function MemberDetailPage({
                   {format(new Date(current.startDate), "PP")} –{" "}
                   {format(new Date(current.endDate), "PP")}
                 </div>
+                <div className="text-muted-foreground mt-1">
+                  Plan price: LKR{" "}
+                  {Number(current.planPriceLkr).toLocaleString()}
+                </div>
               </>
             ) : (
               <p className="text-muted-foreground">No active membership.</p>
             )}
           </CardContent>
         </Card>
+      </div>
+
+      <div>
+        <div className="flex justify-between items-center mb-3">
+          <h3 className="text-lg font-semibold">Payments</h3>
+          <RecordPaymentButton
+            memberId={member.id}
+            currentMembershipId={current?.id ?? null}
+          />
+        </div>
+        <PaymentsTable
+          rows={paymentRows}
+          refundedReferences={refundedReferences}
+        />
       </div>
 
       <div>
