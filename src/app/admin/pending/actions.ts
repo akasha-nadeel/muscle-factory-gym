@@ -5,7 +5,6 @@ import { profiles, plans, memberships, payments } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { clerkClient } from "@clerk/nextjs/server";
-import { format } from "date-fns";
 import { requireAdminProfile } from "@/lib/auth";
 import { computeMembershipWindow } from "@/lib/memberships/window";
 import { validatePaymentInput } from "@/lib/payments/validate";
@@ -142,9 +141,6 @@ export async function _approveMemberUnsafe(input: ApproveInput): Promise<Approve
 /**
  * Server-action wrapper called from the pending-approvals UI.
  * Calls requireAdminProfile() and mirrors status to Clerk publicMetadata.
- *
- * NOTE: This wrapper currently ignores the new payment fields. Task 5 updates
- * it to forward `includeAdmission` + `includeFirstPayment` from the form.
  */
 export async function approveMember(
   _prev: ApproveResult | undefined,
@@ -155,12 +151,35 @@ export async function approveMember(
   const planId = String(formData.get("planId") ?? "");
   if (!memberId || !planId) return { ok: false, error: "memberId and planId required" };
 
-  const today = format(new Date(), "yyyy-MM-dd");
+  const includeAdmission = formData.get("includeAdmission") === "on";
+  const includeFirstPayment = formData.get("includeFirstPayment") === "on";
+
+  const today = (await import("@/lib/tz")).todayInSL();
   const result = await _approveMemberUnsafe({
     memberId,
     planId,
     approvedByProfileId: admin.id,
     today,
+    admissionFee: includeAdmission
+      ? {
+          amountLkr: String(formData.get("admissionAmount") ?? ""),
+          method: String(formData.get("admissionMethod") ?? "cash") as
+            | "cash"
+            | "bank_transfer",
+          reference: "",
+          notes: "",
+        }
+      : undefined,
+    initialMembershipPayment: includeFirstPayment
+      ? {
+          amountLkr: String(formData.get("paymentAmount") ?? ""),
+          method: String(formData.get("paymentMethod") ?? "cash") as
+            | "cash"
+            | "bank_transfer",
+          reference: "",
+          notes: "",
+        }
+      : undefined,
   });
 
   if (result.ok) {
@@ -174,6 +193,7 @@ export async function approveMember(
     revalidatePath("/admin/pending");
     revalidatePath("/admin/members");
     revalidatePath(`/admin/members/${memberId}`);
+    revalidatePath("/admin/reports");
   }
 
   return result;
