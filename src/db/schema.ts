@@ -135,9 +135,13 @@ export const payments = pgTable(
   },
   (t) => [
     index("payments_member_idx").on(t.memberId),
-    uniqueIndex("payments_reference_unique")
+    // Unique reference is only required for SUCCEEDED rows — primarily to give
+    // PayHere webhook delivery (Phase 4) an idempotency key. Refund rows
+    // intentionally share the reference of the original payment they reverse,
+    // so the constraint must NOT apply to status='refunded' or 'pending'.
+    uniqueIndex("payments_reference_succeeded_unique")
       .on(t.reference)
-      .where(sql`${t.reference} is not null`),
+      .where(sql`${t.reference} is not null and ${t.status} = 'succeeded'`),
   ],
 );
 

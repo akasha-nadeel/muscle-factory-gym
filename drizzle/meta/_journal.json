@@ -15,6 +15,13 @@
       "when": 1778843291441,
       "tag": "0001_mighty_mordo",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1778844094870,
+      "tag": "0002_parallel_slayback",
+      "breakpoints": true
     }
   ]
 }

@@ -1,0 +1,2 @@
+DROP INDEX "payments_reference_unique";--> statement-breakpoint
+CREATE UNIQUE INDEX "payments_reference_succeeded_unique" ON "payments" USING btree ("reference") WHERE "payments"."reference" is not null and "payments"."status" = 'succeeded';
