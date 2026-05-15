@@ -8,6 +8,7 @@ import { clerkClient } from "@clerk/nextjs/server";
 import { requireAdminProfile } from "@/lib/auth";
 import { computeMembershipWindow } from "@/lib/memberships/window";
 import { validatePaymentInput } from "@/lib/payments/validate";
+import { _assignNextGymIdUnsafe } from "@/lib/gym-id";
 
 export type ApprovePaymentInput = {
   amountLkr: string;
@@ -38,8 +39,6 @@ export async function _approveMemberUnsafe(input: ApproveInput): Promise<Approve
   if (!plan) return { ok: false, error: "Plan not found" };
   if (!plan.isActive) return { ok: false, error: "Plan is disabled" };
 
-  // Validate any optional payments BEFORE opening the transaction so we never
-  // create a half-rolled-back state for bad input.
   if (input.initialMembershipPayment) {
     const v = validatePaymentInput({
       amountLkr: input.initialMembershipPayment.amountLkr,
@@ -80,9 +79,20 @@ export async function _approveMemberUnsafe(input: ApproveInput): Promise<Approve
         })
         .returning({ id: memberships.id });
 
+      // Assign next gym_id only if the profile doesn't already have one
+      // (defensive — pending profiles should always be null but a manual
+      // INSERT could have set one).
+      let gymIdToSet: number | null = null;
+      if (member.gymId === null) {
+        gymIdToSet = await _assignNextGymIdUnsafe(tx);
+      }
+
       await tx
         .update(profiles)
-        .set({ status: "active" })
+        .set({
+          status: "active",
+          ...(gymIdToSet !== null ? { gymId: gymIdToSet } : {}),
+        })
         .where(eq(profiles.id, input.memberId));
 
       if (input.initialMembershipPayment) {
@@ -138,10 +148,6 @@ export async function _approveMemberUnsafe(input: ApproveInput): Promise<Approve
   return { ok: true };
 }
 
-/**
- * Server-action wrapper called from the pending-approvals UI.
- * Calls requireAdminProfile() and mirrors status to Clerk publicMetadata.
- */
 export async function approveMember(
   _prev: ApproveResult | undefined,
   formData: FormData,
