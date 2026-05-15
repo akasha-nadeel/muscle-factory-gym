@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { db } from "@/db";
-import { profiles, memberships, plans, payments } from "@/db/schema";
+import { profiles, memberships, plans, payments, attendance } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { requireAdminProfile } from "@/lib/auth";
 import { getCurrentMembership } from "@/lib/memberships/current";
@@ -19,6 +19,7 @@ import { todayInSL } from "@/lib/tz";
 import { computeOutstanding } from "@/lib/payments/outstanding";
 import { PaymentsTable } from "./_payments-table";
 import { RecordPaymentButton } from "./_record-payment-button";
+import { AttendanceTable } from "./_attendance-table";
 
 export default async function MemberDetailPage({
   params,
@@ -64,6 +65,13 @@ export default async function MemberDetailPage({
       .map((p) => p.reference!),
   );
 
+  const attendanceRows = await db
+    .select()
+    .from(attendance)
+    .where(eq(attendance.memberId, id))
+    .orderBy(desc(attendance.checkedInAt))
+    .limit(30);
+
   const outstanding = current
     ? computeOutstanding({
         planPriceLkr: current.planPriceLkr,
@@ -84,6 +92,11 @@ export default async function MemberDetailPage({
         <div>
           <h2 className="text-2xl font-semibold">{member.fullName}</h2>
           <p className="text-muted-foreground">{member.email}</p>
+          {member.gymId !== null && (
+            <p className="text-muted-foreground text-sm mt-1">
+              Gym ID: <span className="font-mono font-medium">{member.gymId}</span>
+            </p>
+          )}
         </div>
         <Badge
           variant={
@@ -160,6 +173,11 @@ export default async function MemberDetailPage({
           rows={paymentRows}
           refundedReferences={refundedReferences}
         />
+      </div>
+
+      <div>
+        <h3 className="text-lg font-semibold mb-3">Attendance (last 30)</h3>
+        <AttendanceTable rows={attendanceRows} />
       </div>
 
       <div>
