@@ -79,6 +79,7 @@ export default async function MembersPage({
       <Table>
         <TableHeader>
           <TableRow>
+            <TableHead className="w-24">Gym ID</TableHead>
             <TableHead>Name</TableHead>
             <TableHead>Email</TableHead>
             <TableHead className="w-32">Status</TableHead>
@@ -90,7 +91,7 @@ export default async function MembersPage({
           {rows.length === 0 && (
             <TableRow>
               <TableCell
-                colSpan={5}
+                colSpan={6}
                 className="text-center text-muted-foreground py-6"
               >
                 No members match your filters.
@@ -99,6 +100,9 @@ export default async function MembersPage({
           )}
           {rows.map((m) => (
             <TableRow key={m.id}>
+              <TableCell className="font-mono tabular-nums">
+                {m.gymId ?? "—"}
+              </TableCell>
               <TableCell className="font-medium">{m.fullName}</TableCell>
               <TableCell>{m.email}</TableCell>
               <TableCell>
