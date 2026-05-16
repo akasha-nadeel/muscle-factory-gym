@@ -238,4 +238,37 @@ describe("_processWebhookUnsafe", () => {
     expect(r.ok).toBe(true);
     if (r.ok) expect(r.outcome).toBe("succeeded");
   });
+
+  it("returns no_plan when the payments row has no plan_id", async () => {
+    const ref = "gym_test_no_plan_id";
+    // Insert the pending row WITHOUT planId (the column is nullable)
+    await db.insert(payments).values({
+      memberId,
+      membershipId: null,
+      planId: null,
+      amountLkr: "1500.00",
+      method: "payhere",
+      kind: "membership",
+      status: "pending",
+      reference: ref,
+      recordedBy: memberId,
+    });
+    const r = await _processWebhookUnsafe({
+      verified: payload({ reference: ref, statusCode: "2" }),
+      todaySL: "2026-05-16",
+    });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reason).toBe("no_plan");
+
+    const [row] = await db
+      .select()
+      .from(payments)
+      .where(eq(payments.reference, ref));
+    expect(row.status).toBe("pending");
+    const ms = await db
+      .select()
+      .from(memberships)
+      .where(eq(memberships.memberId, memberId));
+    expect(ms.length).toBe(0);
+  });
 });

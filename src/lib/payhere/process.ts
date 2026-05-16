@@ -43,6 +43,10 @@ export async function _processWebhookUnsafe(input: {
   const reportedAmount = Number(verified.payhere_amount).toFixed(2);
 
   return await db.transaction(async (tx) => {
+    // Drizzle's typed `.for("update")` emits `FOR UPDATE` on this SELECT,
+    // acquiring a row-level lock for the rest of the transaction. We avoid raw
+    // `tx.execute(sql`... for update`)` because that returns snake_case columns
+    // from the postgres-js driver, defeating the typed-row contract elsewhere.
     const [row] = await tx
       .select()
       .from(payments)
@@ -85,6 +89,10 @@ export async function _processWebhookUnsafe(input: {
     if (!row.planId) {
       return { ok: false, reason: "no_plan" } as const;
     }
+    // `isActive` is intentionally NOT filtered: if an admin disabled the plan
+    // between the user's checkout click and PayHere's webhook, we still honor
+    // the payment with the plan's stored `durationDays`. The plan's price was
+    // already snapshotted onto `payments.amountLkr` at checkout time.
     const [plan] = await tx
       .select()
       .from(plans)
