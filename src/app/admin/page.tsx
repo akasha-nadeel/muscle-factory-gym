@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { profiles, payments, attendance, memberships, plans } from "@/db/schema";
+import { profiles, payments, attendance } from "@/db/schema";
 import { and, eq, gte, lt, desc, sql } from "drizzle-orm";
 import { requireAdminProfile } from "@/lib/auth";
 import { Wallet, Users, UserPlus, AlertCircle } from "lucide-react";
@@ -14,8 +14,6 @@ import {
   type RecentCheckin,
 } from "@/components/admin/recent-checkins-panel";
 import { todayInSL } from "@/lib/tz";
-import { computeOutstanding } from "@/lib/payments/outstanding";
-import { getCurrentMembership } from "@/lib/memberships/current";
 
 function startOfMonthSL(todaySL: string): string {
   return `${todaySL.slice(0, 7)}-01`;
@@ -32,11 +30,49 @@ export default async function AdminHome() {
   const monthStart = startOfMonthSL(today);
   const monthEnd = startOfNextMonthSL(today);
 
+  // Total outstanding across active members in ONE SQL pass:
+  //   - pick each active member's latest active+unexpired membership (CTE 1)
+  //   - sum membership-kind payments per membership (CTE 2)
+  //   - return sum of GREATEST(plan_price - paid, 0) across all rows
+  // Mirrors computeOutstanding()'s semantics: refunds (negative amounts) are
+  // included via SUM, and the per-member result is clamped at 0.
+  const outstandingQuery = db.execute(sql`
+    WITH current_memberships AS (
+      SELECT DISTINCT ON (m.member_id)
+        m.id AS membership_id,
+        pl.price_lkr
+      FROM memberships m
+      INNER JOIN plans pl ON pl.id = m.plan_id
+      INNER JOIN profiles pr ON pr.id = m.member_id
+      WHERE m.status = 'active'
+        AND m.end_date >= ${today}::date
+        AND pr.role = 'member'
+        AND pr.status = 'active'
+      ORDER BY m.member_id, m.end_date DESC
+    ),
+    paid_amounts AS (
+      SELECT
+        p.membership_id,
+        SUM(p.amount_lkr) AS total_paid
+      FROM payments p
+      WHERE p.kind = 'membership'
+        AND p.status IN ('succeeded', 'refunded')
+        AND p.membership_id IS NOT NULL
+      GROUP BY p.membership_id
+    )
+    SELECT COALESCE(SUM(GREATEST(
+      cm.price_lkr::numeric - COALESCE(pa.total_paid, 0),
+      0
+    )), 0)::text AS total
+    FROM current_memberships cm
+    LEFT JOIN paid_amounts pa ON pa.membership_id = cm.membership_id
+  `);
+
   const [
     revenueRow,
     activeRow,
     pendingRow,
-    activeMembers,
+    outstandingRawResult,
     paymentsRaw,
     checkinsRaw,
   ] = await Promise.all([
@@ -58,10 +94,7 @@ export default async function AdminHome() {
       .select({ count: sql<string>`count(*)` })
       .from(profiles)
       .where(eq(profiles.status, "pending")),
-    db
-      .select()
-      .from(profiles)
-      .where(and(eq(profiles.role, "member"), eq(profiles.status, "active"))),
+    outstandingQuery,
     db
       .select({
         id: payments.id,
@@ -96,48 +129,12 @@ export default async function AdminHome() {
   const activeCount = Number(activeRow[0]?.count ?? 0);
   const pendingCount = Number(pendingRow[0]?.count ?? 0);
 
-  // Compute total outstanding across active members. For each, fetch their
-  // memberships + payments and call computeOutstanding(). For 500-member
-  // scale this is ~500 queries — acceptable; optimize later if it bites.
-  let outstandingTotal = 0;
-  let outstandingPartial = false;
-  for (const m of activeMembers) {
-    try {
-      const ms = await db
-        .select({
-          id: memberships.id,
-          status: memberships.status,
-          startDate: memberships.startDate,
-          endDate: memberships.endDate,
-          planPriceLkr: plans.priceLkr,
-          planName: plans.name,
-        })
-        .from(memberships)
-        .innerJoin(plans, eq(memberships.planId, plans.id))
-        .where(eq(memberships.memberId, m.id));
-      const current = getCurrentMembership(ms, today);
-      if (!current) continue;
-      const ps = await db
-        .select()
-        .from(payments)
-        .where(eq(payments.memberId, m.id));
-      const out = computeOutstanding({
-        planPriceLkr: current.planPriceLkr,
-        payments: ps.map((p) => ({
-          id: p.id,
-          amountLkr: p.amountLkr,
-          kind: p.kind,
-          status: p.status,
-          membershipId: p.membershipId,
-        })),
-        membershipId: current.id,
-      });
-      outstandingTotal += Number(out);
-    } catch (err) {
-      console.warn(`[dashboard] outstanding calc failed for ${m.id}: ${err}`);
-      outstandingPartial = true;
-    }
-  }
+  // postgres-js returns either an array or { rows: [] } depending on driver
+  // version. Handle both (same pattern as Phase 5/6).
+  const outstandingRows =
+    (outstandingRawResult as unknown as { rows?: Array<{ total: string }> })
+      .rows ?? (outstandingRawResult as unknown as Array<{ total: string }>);
+  const outstandingTotal = Number(outstandingRows?.[0]?.total ?? 0);
 
   return (
     <AdminPage breadcrumbs={[{ label: "Dashboard" }]}>
@@ -175,7 +172,7 @@ export default async function AdminHome() {
             icon={AlertCircle}
             label="Outstanding dues"
             value={`LKR ${outstandingTotal.toLocaleString()}`}
-            caption={outstandingPartial ? "(partial)" : "Across active members"}
+            caption="Across active members"
             accentColor="red"
           />
         </div>
