@@ -85,7 +85,9 @@ async function insertMembership(
   return row;
 }
 
-describe("_sendRemindersUnsafe", () => {
+// React Email's render() spins up react-dom/server and is slow on first call.
+// Bump the suite timeout so the multi-template tests don't flake.
+describe("_sendRemindersUnsafe", { timeout: 30_000 }, () => {
   it("sends 3 different reminders to 3 members in their respective windows", async () => {
     const m3d = await insertMember("threeday");
     const m1d = await insertMember("oneday");
