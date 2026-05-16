@@ -6,7 +6,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
+import { StatusPill } from "@/components/admin/status-pill";
 import { format } from "date-fns";
 import { RefundButton } from "./_refund-button";
 
@@ -68,11 +68,7 @@ export function PaymentsTable({
               </TableCell>
               <TableCell>{r.reference ?? "—"}</TableCell>
               <TableCell>
-                <Badge
-                  variant={r.status === "succeeded" ? "default" : "outline"}
-                >
-                  {r.status}
-                </Badge>
+                <StatusPill variant={r.status}>{r.status}</StatusPill>
               </TableCell>
               <TableCell className="text-right">
                 {canRefund && (

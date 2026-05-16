@@ -28,30 +28,32 @@ function sourceLabel(s: AttendanceRow["source"]) {
 
 export function AttendanceTable({ rows }: { rows: AttendanceRow[] }) {
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead className="w-48">Checked in at</TableHead>
-          <TableHead className="w-32">Source</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {rows.length === 0 && (
+    <div className="rounded-lg border bg-card">
+      <Table>
+        <TableHeader>
           <TableRow>
-            <TableCell colSpan={2} className="text-center text-muted-foreground py-6">
-              No check-ins yet.
-            </TableCell>
+            <TableHead className="w-48">Checked in at</TableHead>
+            <TableHead className="w-32">Source</TableHead>
           </TableRow>
-        )}
-        {rows.map((r) => (
-          <TableRow key={r.id}>
-            <TableCell>{format(r.checkedInAt, "PPp")}</TableCell>
-            <TableCell>
-              <Badge variant="outline">{sourceLabel(r.source)}</Badge>
-            </TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+        </TableHeader>
+        <TableBody>
+          {rows.length === 0 && (
+            <TableRow>
+              <TableCell colSpan={2} className="text-center text-muted-foreground py-6">
+                No check-ins yet.
+              </TableCell>
+            </TableRow>
+          )}
+          {rows.map((r) => (
+            <TableRow key={r.id}>
+              <TableCell>{format(r.checkedInAt, "PPp")}</TableCell>
+              <TableCell>
+                <Badge variant="outline">{sourceLabel(r.source)}</Badge>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
   );
 }
