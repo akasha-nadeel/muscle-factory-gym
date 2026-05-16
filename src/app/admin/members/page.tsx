@@ -11,9 +11,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MemberFilters } from "./_filters";
+import { AdminPage } from "@/components/admin/admin-page";
+import { StatusPill } from "@/components/admin/status-pill";
 
 const PAGE_SIZE = 25;
 
@@ -73,89 +74,87 @@ export default async function MembersPage({
   }
 
   return (
-    <div className="space-y-6">
-      <h2 className="text-2xl font-semibold">Members</h2>
-      <MemberFilters status={status} q={q} />
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-24">Gym ID</TableHead>
-            <TableHead>Name</TableHead>
-            <TableHead>Email</TableHead>
-            <TableHead className="w-32">Status</TableHead>
-            <TableHead className="w-40">Joined</TableHead>
-            <TableHead className="w-24 text-right">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {rows.length === 0 && (
-            <TableRow>
-              <TableCell
-                colSpan={6}
-                className="text-center text-muted-foreground py-6"
-              >
-                No members match your filters.
-              </TableCell>
-            </TableRow>
-          )}
-          {rows.map((m) => (
-            <TableRow key={m.id}>
-              <TableCell className="font-mono tabular-nums">
-                {m.gymId ?? "—"}
-              </TableCell>
-              <TableCell className="font-medium">{m.fullName}</TableCell>
-              <TableCell>{m.email}</TableCell>
-              <TableCell>
-                <Badge
-                  variant={
-                    m.status === "active"
-                      ? "default"
-                      : m.status === "pending"
-                        ? "secondary"
-                        : "outline"
-                  }
-                >
-                  {m.status}
-                </Badge>
-              </TableCell>
-              <TableCell>{m.createdAt.toLocaleDateString()}</TableCell>
-              <TableCell className="text-right">
-                <Button
-                  render={<Link href={`/admin/members/${m.id}`} />}
-                  size="sm"
-                  variant="ghost"
-                >
-                  View
-                </Button>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-      <div className="flex justify-between items-center text-sm text-muted-foreground">
-        <span>
-          Showing {(page - 1) * PAGE_SIZE + 1}–
-          {Math.min(page * PAGE_SIZE, total)} of {total}
-        </span>
-        <div className="flex gap-2">
-          <Button
-            render={<Link href={pageHref(Math.max(1, page - 1))} />}
-            variant="outline"
-            size="sm"
-            disabled={page <= 1}
-          >
-            Previous
-          </Button>
-          <Button
-            render={<Link href={pageHref(Math.min(totalPages, page + 1))} />}
-            variant="outline"
-            size="sm"
-            disabled={page >= totalPages}
-          >
-            Next
-          </Button>
+    <AdminPage breadcrumbs={[{ label: "Members" }]}>
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <h2 className="text-2xl font-semibold">Members</h2>
+        </div>
+        <MemberFilters status={status} q={q} />
+        <div className="rounded-lg border bg-card">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-24">Gym ID</TableHead>
+                <TableHead>Name</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead className="w-32">Status</TableHead>
+                <TableHead className="w-40">Joined</TableHead>
+                <TableHead className="w-24 text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {rows.length === 0 && (
+                <TableRow>
+                  <TableCell
+                    colSpan={6}
+                    className="text-center text-muted-foreground py-6"
+                  >
+                    No members match your filters.
+                  </TableCell>
+                </TableRow>
+              )}
+              {rows.map((m) => (
+                <TableRow key={m.id}>
+                  <TableCell className="font-mono tabular-nums">
+                    {m.gymId ?? "—"}
+                  </TableCell>
+                  <TableCell className="font-medium">{m.fullName}</TableCell>
+                  <TableCell className="text-muted-foreground">{m.email}</TableCell>
+                  <TableCell>
+                    <StatusPill variant={m.status}>{m.status}</StatusPill>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {m.createdAt.toLocaleDateString()}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button
+                      render={<Link href={`/admin/members/${m.id}`} />}
+                      size="sm"
+                      variant="ghost"
+                    >
+                      View
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+        <div className="flex justify-between items-center text-sm text-muted-foreground">
+          <span>
+            Showing {(page - 1) * PAGE_SIZE + 1}–
+            {Math.min(page * PAGE_SIZE, total)} of {total}
+          </span>
+          <div className="flex gap-2">
+            <Button
+              render={<Link href={pageHref(Math.max(1, page - 1))} />}
+              variant="outline"
+              size="sm"
+              disabled={page <= 1}
+            >
+              Previous
+            </Button>
+            <Button
+              render={<Link href={pageHref(Math.min(totalPages, page + 1))} />}
+              variant="outline"
+              size="sm"
+              disabled={page >= totalPages}
+            >
+              Next
+            </Button>
+          </div>
         </div>
       </div>
-    </div>
+    </AdminPage>
   );
 }

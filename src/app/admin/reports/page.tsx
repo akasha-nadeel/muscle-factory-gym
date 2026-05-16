@@ -6,6 +6,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { slMonthOf } from "@/lib/tz";
+import { AdminPage } from "@/components/admin/admin-page";
 
 type Bucket = {
   month: string; // YYYY-MM in SL
@@ -53,6 +54,7 @@ export default async function ReportsPage() {
   }
 
   return (
+    <AdminPage breadcrumbs={[{ label: "Reports" }]}>
     <div className="space-y-8">
       <h2 className="text-2xl font-semibold">Reports</h2>
 
@@ -109,5 +111,6 @@ export default async function ReportsPage() {
         </p>
       </div>
     </div>
+    </AdminPage>
   );
 }

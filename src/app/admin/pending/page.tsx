@@ -7,6 +7,7 @@ import {
 } from "@/components/ui/table";
 import { format } from "date-fns";
 import { ApproveButton } from "./_approve-button";
+import { AdminPage } from "@/components/admin/admin-page";
 
 export default async function PendingPage() {
   await requireAdminProfile();
@@ -22,6 +23,7 @@ export default async function PendingPage() {
     .where(eq(plans.isActive, true));
 
   return (
+    <AdminPage breadcrumbs={[{ label: "Pending" }]}>
     <div className="space-y-6">
       <h2 className="text-2xl font-semibold">Pending approvals</h2>
       <Table>
@@ -58,5 +60,6 @@ export default async function PendingPage() {
         </TableBody>
       </Table>
     </div>
+    </AdminPage>
   );
 }
