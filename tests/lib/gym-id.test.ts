@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { db } from "@/db";
 import { profiles } from "@/db/schema";
-import { like } from "drizzle-orm";
+import { like, sql } from "drizzle-orm";
 import { _assignNextGymIdUnsafe } from "@/lib/gym-id";
 
 const CLERK_PREFIX = "user_phase3_gymid_";
@@ -12,6 +12,13 @@ async function clean() {
 
 beforeEach(clean);
 afterEach(clean);
+
+async function currentMax(): Promise<number | null> {
+  const rows = await db
+    .select({ m: sql<number | null>`max(${profiles.gymId})` })
+    .from(profiles);
+  return rows[0]?.m ?? null;
+}
 
 async function insertMember(suffix: string, gymId: number | null) {
   const [row] = await db
@@ -29,23 +36,35 @@ async function insertMember(suffix: string, gymId: number | null) {
 }
 
 describe("_assignNextGymIdUnsafe", () => {
-  it("returns 1000 when no profiles have a gym_id yet", async () => {
+  it("returns MAX(gym_id) + 1 (or 1000 when table is empty)", async () => {
+    const baseline = await currentMax();
     const next = await _assignNextGymIdUnsafe(db);
-    expect(next).toBe(1000);
+    if (baseline === null) {
+      expect(next).toBe(1000);
+    } else {
+      expect(next).toBe(baseline + 1);
+    }
   });
 
-  it("returns MAX(gym_id) + 1 when some profiles have one", async () => {
-    await insertMember("a", 1000);
-    await insertMember("b", 1005);
+  it("returns MAX(gym_id) + 1 after inserts above the current baseline", async () => {
+    const baseline = (await currentMax()) ?? 999;
+    const offset = baseline + 100; // safely above any real data
+    await insertMember("a", offset);
+    await insertMember("b", offset + 5);
     const next = await _assignNextGymIdUnsafe(db);
-    expect(next).toBe(1006);
+    expect(next).toBe(offset + 6);
   });
 
-  it("ignores profiles with null gym_id", async () => {
+  it("ignores profiles inserted with null gym_id", async () => {
+    const baselineBefore = await currentMax();
     await insertMember("pending1", null);
     await insertMember("pending2", null);
     const next = await _assignNextGymIdUnsafe(db);
-    expect(next).toBe(1000);
+    if (baselineBefore === null) {
+      expect(next).toBe(1000);
+    } else {
+      expect(next).toBe(baselineBefore + 1);
+    }
   });
 
   it("throws if MAX(gym_id) reaches 9999", async () => {

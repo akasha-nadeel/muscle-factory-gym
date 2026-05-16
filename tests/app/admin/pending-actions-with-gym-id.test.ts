@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { db } from "@/db";
 import { profiles, plans, memberships, payments } from "@/db/schema";
-import { eq, like } from "drizzle-orm";
+import { eq, like, sql } from "drizzle-orm";
 import { _approveMemberUnsafe } from "@/app/admin/pending/actions";
 
 const CLERK_PREFIX = "user_phase3_approve_gymid_";
@@ -62,7 +62,12 @@ async function insertPending(suffix: string) {
 }
 
 describe("_approveMemberUnsafe assigns gym_id", () => {
-  it("assigns gym_id starting at 1000 on the first approval", async () => {
+  it("assigns the next sequential gym_id on approval", async () => {
+    const baselineRows = await db
+      .select({ m: sql<number | null>`max(${profiles.gymId})` })
+      .from(profiles);
+    const baseline = baselineRows[0]?.m ?? null;
+
     const member = await insertPending("first");
     const r = await _approveMemberUnsafe({
       memberId: member.id,
@@ -75,7 +80,11 @@ describe("_approveMemberUnsafe assigns gym_id", () => {
       .select()
       .from(profiles)
       .where(eq(profiles.id, member.id));
-    expect(reloaded.gymId).toBe(1000);
+    if (baseline === null) {
+      expect(reloaded.gymId).toBe(1000);
+    } else {
+      expect(reloaded.gymId).toBe(baseline + 1);
+    }
   });
 
   it("assigns consecutive gym_ids across multiple approvals", async () => {
