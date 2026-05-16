@@ -1,8 +1,17 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { createHash } from "node:crypto";
 import { db } from "@/db";
 import { profiles, plans, memberships, payments } from "@/db/schema";
 import { eq, like } from "drizzle-orm";
+
+vi.mock("@/lib/email/resend-mailer", () => ({
+  makeResendMailer: () => ({
+    async send() {
+      return { ok: true as const };
+    },
+  }),
+}));
+
 import { POST } from "@/app/api/payments/payhere/webhook/route";
 
 const CLERK_PREFIX = "user_phase4_webhook_";

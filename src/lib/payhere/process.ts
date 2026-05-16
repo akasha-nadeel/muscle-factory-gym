@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { payments, memberships, plans } from "@/db/schema";
+import { payments, memberships, plans, profiles } from "@/db/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { computeNextMembershipWindow } from "@/lib/memberships/next-window";
 
@@ -14,6 +14,15 @@ export type VerifiedWebhookPayload = {
   [key: string]: unknown;
 };
 
+export type ReceiptContext = {
+  memberEmail: string;
+  memberName: string;
+  planName: string;
+  amountLkr: string;
+  newMembershipStart: string;
+  newMembershipEnd: string;
+};
+
 export type ProcessOutcome =
   | "succeeded"
   | "failed"
@@ -22,16 +31,19 @@ export type ProcessOutcome =
 export type ProcessReason = "row_not_found" | "amount_mismatch" | "no_plan";
 
 export type ProcessResult =
-  | { ok: true; outcome: ProcessOutcome }
+  | { ok: true; outcome: "succeeded"; sendCtx: ReceiptContext }
+  | { ok: true; outcome: "failed" | "still_pending" | "already_processed" }
   | { ok: false; reason: ProcessReason };
 
 /**
  * Apply a signature-verified PayHere webhook to our payments row.
  *
+ * On a fresh `succeeded` outcome, returns a `sendCtx` payload that the
+ * route handler uses to fire a receipt email AFTER the transaction
+ * commits. Duplicate deliveries (`already_processed`) return NO sendCtx.
+ *
  * Concurrency: opens a transaction and acquires a row-level lock
  * (FOR UPDATE) on the payments row keyed by `reference + method='payhere'`.
- * A simultaneous second delivery waits, then exits via the
- * `already_processed` branch.
  */
 export async function _processWebhookUnsafe(input: {
   verified: VerifiedWebhookPayload;
@@ -135,6 +147,23 @@ export async function _processWebhookUnsafe(input: {
       .set({ status: "succeeded", membershipId: created.id, paidAt: new Date() })
       .where(eq(payments.id, row.id));
 
-    return { ok: true, outcome: "succeeded" } as const;
+    // Capture sendCtx inside the txn so the route handler doesn't need a
+    // re-SELECT after commit.
+    const [member] = await tx
+      .select({ email: profiles.email, fullName: profiles.fullName })
+      .from(profiles)
+      .where(eq(profiles.id, row.memberId))
+      .limit(1);
+
+    const sendCtx: ReceiptContext = {
+      memberEmail: member?.email ?? "",
+      memberName: member?.fullName ?? "",
+      planName: plan.name,
+      amountLkr: Number(row.amountLkr).toFixed(2),
+      newMembershipStart: window.startDate,
+      newMembershipEnd: window.endDate,
+    };
+
+    return { ok: true, outcome: "succeeded", sendCtx } as const;
   });
 }

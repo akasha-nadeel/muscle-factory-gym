@@ -5,6 +5,9 @@ import {
   type VerifiedWebhookPayload,
 } from "@/lib/payhere/process";
 import { todayInSL } from "@/lib/tz";
+import { renderEmail } from "@/lib/email/render";
+import { PayhereReceiptEmail } from "@/lib/email/templates/payhere-receipt";
+import { makeResendMailer } from "@/lib/email/resend-mailer";
 
 export async function POST(req: Request) {
   const secret = process.env.PAYHERE_MERCHANT_SECRET;
@@ -34,6 +37,39 @@ export async function POST(req: Request) {
     verified: payload as unknown as VerifiedWebhookPayload,
     todaySL: todayInSL(),
   });
+
+  // Fire receipt email AFTER the transaction commits, only on a fresh
+  // success outcome. Receipt failure is best-effort: log and continue.
+  if (result.ok && result.outcome === "succeeded" && result.sendCtx) {
+    try {
+      const mailer = makeResendMailer();
+      const html = await renderEmail(
+        <PayhereReceiptEmail
+          memberName={result.sendCtx.memberName}
+          planName={result.sendCtx.planName}
+          amountLkr={result.sendCtx.amountLkr}
+          newMembershipStart={result.sendCtx.newMembershipStart}
+          newMembershipEnd={result.sendCtx.newMembershipEnd}
+        />,
+      );
+      const send = await mailer.send({
+        to: result.sendCtx.memberEmail,
+        subject: `Payment received — ${result.sendCtx.planName}`,
+        html,
+      });
+      if (!send.ok) {
+        console.warn(
+          `[payhere webhook] receipt send failed for ${result.sendCtx.memberEmail}: ${send.error}`,
+        );
+      }
+    } catch (err) {
+      console.warn(
+        `[payhere webhook] receipt path threw: ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      );
+    }
+  }
 
   // Always 200 after signature verify — non-2xx triggers PayHere retries
   // and the outcome is informational, not failure.
