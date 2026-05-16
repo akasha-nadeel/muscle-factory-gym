@@ -116,6 +116,9 @@ export const payments = pgTable(
     membershipId: uuid("membership_id").references(() => memberships.id, {
       onDelete: "set null",
     }),
+    planId: uuid("plan_id").references(() => plans.id, {
+      onDelete: "set null",
+    }),
     memberId: uuid("member_id")
       .notNull()
       .references(() => profiles.id, { onDelete: "restrict" }),
