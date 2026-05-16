@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, timingSafeEqual } from "node:crypto";
 
 function md5Upper(s: string): string {
   return createHash("md5").update(s).digest("hex").toUpperCase();
@@ -113,5 +113,7 @@ export function verifyWebhookSignature(
       (payload.status_code as string) +
       md5Upper(merchantSecret),
   );
-  return expected === (payload.md5sig as string);
+  const provided = payload.md5sig as string;
+  if (expected.length !== provided.length) return false;
+  return timingSafeEqual(Buffer.from(expected), Buffer.from(provided));
 }
