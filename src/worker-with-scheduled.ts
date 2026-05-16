@@ -27,6 +27,7 @@ type ExecutionContext = {
 const ROUTES: Record<string, string> = {
   "30 18 * * *": "/api/cron/expire-memberships",
   "0 19 * * *": "/api/cron/inactivate-stale-members",
+  "30 1 * * *": "/api/cron/send-reminders",
   "0 * * * *": "/api/cron/reconcile-payhere",
 };
 

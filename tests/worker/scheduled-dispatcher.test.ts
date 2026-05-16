@@ -95,4 +95,22 @@ describe("worker-with-scheduled — scheduled()", () => {
     await ctx.flush();
     expect(warn).toHaveBeenCalled();
   });
+
+  it("fetches /api/cron/send-reminders for the 30 1 * * * cron", async () => {
+    fetchMock.mockResolvedValue(new Response("{}", { status: 200 }));
+    const { default: worker } = await import("@/worker-with-scheduled");
+    const ctx = makeCtx();
+    await worker.scheduled(
+      { cron: "30 1 * * *" } as unknown as ScheduledEvent,
+      {
+        CRON_SECRET: "secret-x",
+        WORKER_HOSTNAME: "gym.example",
+      } as unknown as Env,
+      ctx as unknown as ExecutionContext,
+    );
+    await ctx.flush();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url] = fetchMock.mock.calls[0];
+    expect(url).toBe("https://gym.example/api/cron/send-reminders");
+  });
 });
