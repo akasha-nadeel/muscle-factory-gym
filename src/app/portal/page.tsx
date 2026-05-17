@@ -148,7 +148,7 @@ export default async function PortalHome() {
         <Card>
           <CardHeader><CardTitle>No active membership</CardTitle></CardHeader>
           <CardContent className="text-sm text-muted-foreground">
-            Please visit the front desk to renew, or wait for the online payment option (coming soon).
+            Please visit the front desk to renew.
           </CardContent>
         </Card>
       )}

@@ -1,7 +1,7 @@
 /**
  * Sri Lanka is UTC+5:30, no DST. We shift UTC by this offset, then read the
  * UTC-getters on the shifted Date so the runtime's local timezone is ignored.
- * Works identically on Windows dev (SLT) and Cloudflare Workers (UTC).
+ * Works identically on Windows dev (SLT) and Vercel runtime (UTC).
  */
 const SL_OFFSET_MIN = 5 * 60 + 30;
 

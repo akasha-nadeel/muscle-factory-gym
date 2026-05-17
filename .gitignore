@@ -43,9 +43,5 @@ next-env.d.ts
 # scratch
 .env.local.draft
 
-# cloudflare build output
-.open-next/
-.wrangler/
-
 # claude code session state
 .claude/

@@ -21,3 +21,6 @@ export async function POST(req: Request) {
   });
   return NextResponse.json(summary);
 }
+
+// Vercel cron invokes via GET.
+export const GET = POST;

@@ -1,0 +1,17 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "crons": [
+    {
+      "path": "/api/cron/expire-memberships",
+      "schedule": "30 18 * * *"
+    },
+    {
+      "path": "/api/cron/inactivate-stale-members",
+      "schedule": "0 19 * * *"
+    },
+    {
+      "path": "/api/cron/send-reminders",
+      "schedule": "30 1 * * *"
+    }
+  ]
+}
