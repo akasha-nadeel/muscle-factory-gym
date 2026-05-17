@@ -6,14 +6,12 @@ const connectionString = process.env.DATABASE_URL!;
 
 // CF Workers + Supabase transaction pooler:
 // - `prepare: false` — pgbouncer transaction mode doesn't support prepared statements
-// - `max: 1` — each worker invocation is short-lived; no point pooling
-// - `idle_timeout: 20` — close the connection 20s after last query so a stale
-//   socket can't linger across invocations
-// - `connect_timeout: 10` — fail fast if the pooler is unreachable
+// - `fetch_types: false` — skip the prepared-statement type lookup at startup;
+//   the pooler in transaction mode rejects it and the auto-retry adds ~1s latency
+// - `max: 5` — small pool; CF Workers isolates may reuse connections across requests
 const client = postgres(connectionString, {
   prepare: false,
-  max: 1,
-  idle_timeout: 20,
-  connect_timeout: 10,
+  fetch_types: false,
+  max: 5,
 });
 export const db = drizzle(client, { schema });
