@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
@@ -25,10 +26,15 @@ export function Sidebar() {
   return (
     <aside className="hidden md:flex w-60 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
       <div className="px-5 py-5 border-b border-sidebar-border">
-        <div className="text-base font-semibold text-foreground">
-          Muscle Factory Gym
-        </div>
-        <div className="text-xs text-muted-foreground mt-0.5">
+        <Image
+          src="/logo.png"
+          alt="Muscle Factory Gym"
+          width={200}
+          height={46}
+          priority
+          className="h-auto w-full max-w-[200px]"
+        />
+        <div className="text-xs text-muted-foreground mt-1.5">
           Admin console
         </div>
       </div>

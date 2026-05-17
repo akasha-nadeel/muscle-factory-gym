@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { plans } from "@/db/schema";
@@ -51,9 +52,14 @@ export default async function Home() {
         {/* Top bar */}
         <header className="border-b">
           <div className="max-w-6xl mx-auto px-4 md:px-6 h-14 flex items-center justify-between">
-            <div className="font-semibold tracking-tight">
-              Muscle Factory Gym
-            </div>
+            <Image
+              src="/logo.png"
+              alt="Muscle Factory Gym"
+              width={180}
+              height={41}
+              priority
+              className="h-auto w-auto max-h-9"
+            />
             <div className="flex items-center gap-2">
               <Link
                 href="/sign-in"
