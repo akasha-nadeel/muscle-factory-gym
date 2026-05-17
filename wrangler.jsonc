@@ -22,5 +22,11 @@
   },
   "vars": {
     "WORKER_HOSTNAME": "muscle-factory-gym.kha-akashanadeel.workers.dev"
-  }
+  },
+  "hyperdrive": [
+    {
+      "binding": "HYPERDRIVE",
+      "id": "f73ba8f592934b65806013f37319cb81"
+    }
+  ]
 }
