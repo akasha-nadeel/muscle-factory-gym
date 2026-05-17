@@ -25,14 +25,14 @@ export function Sidebar() {
   const pathname = usePathname();
   return (
     <aside className="hidden md:flex w-60 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
-      <div className="h-14 px-4 border-b border-sidebar-border flex items-center">
+      <div className="h-14 px-4 border-b border-sidebar-border flex items-center justify-center">
         <Image
           src="/logo.png"
           alt="Muscle Factory Gym"
-          width={140}
-          height={32}
+          width={180}
+          height={42}
           priority
-          className="h-7 w-auto"
+          className="h-9 w-auto"
         />
       </div>
       <nav className="flex-1 px-3 py-4 flex flex-col gap-1">
