@@ -41,12 +41,12 @@ export function MemberFilters({
   }
 
   return (
-    <div className="flex gap-3 items-center">
+    <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
       <Select
         value={status ?? "all"}
         onValueChange={(v) => update({ status: v })}
       >
-        <SelectTrigger className="w-40">
+        <SelectTrigger className="w-full sm:w-40">
           <SelectValue placeholder="All" />
         </SelectTrigger>
         <SelectContent>

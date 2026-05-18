@@ -130,7 +130,7 @@ export default async function MembersPage({
             </TableBody>
           </Table>
         </div>
-        <div className="flex justify-between items-center text-sm text-muted-foreground">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 text-sm text-muted-foreground">
           <span>
             Showing {(page - 1) * PAGE_SIZE + 1}–
             {Math.min(page * PAGE_SIZE, total)} of {total}

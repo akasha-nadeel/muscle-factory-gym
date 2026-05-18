@@ -94,10 +94,12 @@ export default async function PortalHome() {
 
   return (
     <div className="space-y-6 max-w-3xl">
-      <div className="flex justify-between items-start">
-        <h2 className="text-2xl font-semibold">Welcome, {me.fullName}</h2>
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
+        <h2 className="text-2xl font-semibold min-w-0 break-words">
+          Welcome, {me.fullName}
+        </h2>
         {me.gymId !== null && (
-          <Card className="px-4 py-2">
+          <Card className="px-4 py-2 shrink-0">
             <div className="text-xs text-muted-foreground uppercase tracking-wide">
               Your Gym ID
             </div>
