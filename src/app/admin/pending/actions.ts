@@ -196,6 +196,7 @@ export async function approveMember(
         publicMetadata: { role: member.role, status: "active" },
       });
     }
+    revalidatePath("/admin");
     revalidatePath("/admin/pending");
     revalidatePath("/admin/members");
     revalidatePath(`/admin/members/${memberId}`);

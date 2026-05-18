@@ -122,6 +122,7 @@ export async function recordPayment(
   };
   const result = await _recordPaymentUnsafe(raw);
   if (result.ok) {
+    revalidatePath("/admin");
     revalidatePath(`/admin/members/${bound.memberId}`);
     revalidatePath("/admin/reports");
     revalidatePath("/portal");
@@ -138,6 +139,7 @@ export async function refundPayment(
     refundedByProfileId: admin.id,
   });
   if (result.ok) {
+    revalidatePath("/admin");
     revalidatePath("/admin/members");
     revalidatePath("/admin/reports");
     revalidatePath("/portal");
