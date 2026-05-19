@@ -18,14 +18,27 @@ export type RecentPayment = {
   paidAt: Date;
 };
 
-export function RecentPaymentsPanel({ rows }: { rows: RecentPayment[] }) {
+export function RecentPaymentsPanel({
+  rows,
+  headerSlot,
+}: {
+  rows: RecentPayment[];
+  headerSlot?: React.ReactNode;
+}) {
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-        <CardTitle className="text-base">Recent payments</CardTitle>
-        <Button variant="ghost" size="sm" render={<Link href="/admin/reports" />}>
-          View all
-        </Button>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3 gap-2">
+        <CardTitle className="text-base shrink-0">Recent payments</CardTitle>
+        <div className="flex items-center gap-2 ml-auto">
+          {headerSlot}
+          <Button
+            variant="ghost"
+            size="sm"
+            render={<Link href="/admin/reports" />}
+          >
+            View all
+          </Button>
+        </div>
       </CardHeader>
       <CardContent className="p-0">
         {rows.length === 0 ? (

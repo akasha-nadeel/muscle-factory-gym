@@ -28,8 +28,9 @@ export function StatCard({
 }) {
   return (
     <div
+      data-slot="stat-card"
       className={cn(
-        "rounded-xl border bg-card p-5 flex items-start gap-4",
+        "rounded-xl border bg-card p-5 flex items-start gap-4 transition-colors",
         className,
       )}
     >

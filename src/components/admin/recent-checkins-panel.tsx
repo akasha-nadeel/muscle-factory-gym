@@ -21,11 +21,20 @@ const sourceLabel: Record<RecentCheckin["source"], string> = {
   kiosk_id: "Kiosk",
 };
 
-export function RecentCheckinsPanel({ rows }: { rows: RecentCheckin[] }) {
+export function RecentCheckinsPanel({
+  rows,
+  headerSlot,
+}: {
+  rows: RecentCheckin[];
+  headerSlot?: React.ReactNode;
+}) {
   return (
     <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-base">Recent check-ins</CardTitle>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3 gap-2">
+        <CardTitle className="text-base shrink-0">Recent check-ins</CardTitle>
+        {headerSlot && (
+          <div className="flex items-center gap-2 ml-auto">{headerSlot}</div>
+        )}
       </CardHeader>
       <CardContent className="p-0">
         {rows.length === 0 ? (

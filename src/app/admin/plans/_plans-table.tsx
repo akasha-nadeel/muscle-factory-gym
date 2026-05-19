@@ -14,6 +14,8 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -35,11 +37,14 @@ export function PlansTable({ plans }: { plans: Plan[] }) {
   const [isPending, startTransition] = useTransition();
   const [editing, setEditing] = useState<Plan | null>(null);
   const [creating, setCreating] = useState(false);
+  const [confirmDisable, setConfirmDisable] = useState<Plan | null>(null);
 
-  function toggleActive(p: Plan) {
+  function setActive(p: Plan, next: boolean) {
     startTransition(async () => {
-      const r = await setPlanActive(p.id, !p.isActive);
+      const r = await setPlanActive(p.id, next);
       if (!r.ok) toast.error("Failed to update plan");
+      else if (!next) toast.success("Plan disabled");
+      setConfirmDisable(null);
     });
   }
 
@@ -108,7 +113,9 @@ export function PlansTable({ plans }: { plans: Plan[] }) {
                   variant="ghost"
                   size="sm"
                   disabled={isPending}
-                  onClick={() => toggleActive(p)}
+                  onClick={() =>
+                    p.isActive ? setConfirmDisable(p) : setActive(p, true)
+                  }
                 >
                   {p.isActive ? "Disable" : "Re-enable"}
                 </Button>
@@ -139,6 +146,47 @@ export function PlansTable({ plans }: { plans: Plan[] }) {
               }}
             />
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={confirmDisable !== null}
+        onOpenChange={(o) => !o && setConfirmDisable(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Disable this plan?</DialogTitle>
+            <DialogDescription>
+              {confirmDisable && (
+                <>
+                  &quot;{confirmDisable.name}&quot; will no longer appear when
+                  approving new members or recording payments. Existing
+                  memberships on this plan stay active. You can re-enable
+                  anytime.
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setConfirmDisable(null)}
+              disabled={isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              disabled={isPending}
+              onClick={() =>
+                confirmDisable && setActive(confirmDisable, false)
+              }
+            >
+              {isPending ? "Disabling…" : "Disable plan"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>
