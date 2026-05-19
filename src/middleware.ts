@@ -2,7 +2,13 @@ import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
 const isAdminRoute = createRouteMatcher(["/admin(.*)"]);
-const isMemberRoute = createRouteMatcher(["/portal(.*)"]);
+const isMemberRoute = createRouteMatcher([
+  "/portal(.*)",
+  // /checkin/scan is token-bearing but member-identified via Clerk session.
+  // Adding it here makes Clerk redirect to sign-in (preserving ?t= in the
+  // return URL) so a fresh phone gets the one-time sign-in then auto-checks-in.
+  "/checkin/scan(.*)",
+]);
 const isProtectedApi = createRouteMatcher(["/api/admin(.*)", "/api/member(.*)"]);
 
 export default clerkMiddleware(async (auth, req) => {
