@@ -58,7 +58,7 @@ export default async function Home() {
               width={180}
               height={41}
               priority
-              className="h-auto w-auto max-h-9"
+              className="h-auto w-auto max-h-9 invert hue-rotate-180 dark:invert-0 dark:hue-rotate-0"
             />
             <div className="flex items-center gap-2">
               <Link

@@ -11,7 +11,7 @@ export function Sidebar() {
           width={180}
           height={42}
           priority
-          className="h-9 w-auto"
+          className="h-9 w-auto invert hue-rotate-180 dark:invert-0 dark:hue-rotate-0"
         />
       </div>
       <NavItems />
