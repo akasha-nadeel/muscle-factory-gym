@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, afterAll } from "vitest";
 import { db } from "@/db";
 import { profiles } from "@/db/schema";
 import { eq } from "drizzle-orm";
@@ -9,6 +9,13 @@ const TEST_EMAIL = "wh-test@example.com";
 
 describe("upsertProfileFromClerk", () => {
   beforeEach(async () => {
+    await db.delete(profiles).where(eq(profiles.clerkUserId, TEST_CLERK_ID));
+  });
+
+  // Belt-and-suspenders: if the test suite aborts mid-run (e.g. user
+  // Ctrl-C's), beforeEach won't have a chance to clean up. afterAll catches
+  // that case so the fixture doesn't leak into shared dev/prod DBs.
+  afterAll(async () => {
     await db.delete(profiles).where(eq(profiles.clerkUserId, TEST_CLERK_ID));
   });
 

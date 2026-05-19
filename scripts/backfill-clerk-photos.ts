@@ -10,12 +10,15 @@
  *
  * Idempotent — re-running only touches rows still missing photoUrl.
  */
-import "dotenv/config";
+// Loads .env.local + .env into process.env. MUST be the first import — it
+// runs as a side-effect before sibling imports below pull in src/db/index.ts,
+// which reads DATABASE_URL at module-load time.
+import "./_load-env";
+
 import { clerkClient } from "@clerk/nextjs/server";
-import { isNull } from "drizzle-orm";
+import { isNull, eq } from "drizzle-orm";
 import { db } from "../src/db";
 import { profiles } from "../src/db/schema";
-import { eq } from "drizzle-orm";
 
 async function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
