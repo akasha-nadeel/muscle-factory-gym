@@ -12,9 +12,18 @@ export type Profile = InferSelectModel<typeof profiles>;
 export async function getCurrentUser() {
   const { userId, sessionClaims } = await auth();
   if (!userId) return null;
-  const role =
-    (sessionClaims?.metadata as { role?: Role } | undefined)?.role ?? "member";
-  return { userId, role };
+  const claimedRole = (sessionClaims?.metadata as { role?: Role } | undefined)
+    ?.role;
+  if (claimedRole) return { userId, role: claimedRole };
+  // Clerk session claims can lag for a few seconds after sign-in — the JWT
+  // doesn't yet carry public_metadata.role even though the user is an admin
+  // in our DB. Without this fallback, the missing claim defaults to "member"
+  // and a logged-in admin gets caught in a /portal → /admin → /portal loop
+  // (each redirect re-reading the same stale claims). One DB query during
+  // the stale window breaks the loop; once claims refresh, this branch is
+  // never taken.
+  const profile = await getProfileByClerkId(userId);
+  return { userId, role: (profile?.role ?? "member") as Role };
 }
 
 export async function getProfileByClerkId(
@@ -44,6 +53,9 @@ export async function requireAdmin() {
 export async function requireMember() {
   const u = await getCurrentUser();
   if (!u) redirect("/sign-in");
+  // Admins land here briefly when Clerk's after-sign-in URL points at /portal.
+  // Redirect at the layout level so they never see the portal chrome.
+  if (u.role === "admin") redirect("/admin");
   return u;
 }
 

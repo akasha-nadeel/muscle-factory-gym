@@ -16,7 +16,10 @@ import { computeOutstanding } from "@/lib/payments/outstanding";
 
 export default async function PortalHome() {
   const me = await requireMemberProfile();
-
+  // Defensive: the layout's requireMember() already redirects admins to /admin
+  // based on sessionClaims, but those claims can be stale for a few seconds
+  // after sign-in. requireMemberProfile reads the DB role (authoritative),
+  // so we catch the stale-session case here too.
   if (me.role === "admin") redirect("/admin");
 
   if (me.status === "pending") {
@@ -93,7 +96,7 @@ export default async function PortalHome() {
       : null;
 
   return (
-    <div className="space-y-6 max-w-3xl">
+    <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
         <h2 className="text-2xl font-semibold min-w-0 break-words">
           Welcome, {me.fullName}

@@ -11,7 +11,17 @@ export default clerkMiddleware(async (auth, req) => {
     if (!userId) return redirectToSignIn();
     const role = (sessionClaims?.metadata as { role?: string } | undefined)
       ?.role;
-    if (isAdminRoute(req) && role !== "admin") {
+    // Send admins straight to /admin if they hit /portal. Avoids the brief
+    // "blank /portal" flash that used to happen when role checks lived only
+    // in layouts. (When claims are stale and role is undefined we let it
+    // through; the layout's DB-backed check handles that case.)
+    if (isMemberRoute(req) && role === "admin") {
+      return NextResponse.redirect(new URL("/admin", req.url));
+    }
+    // Only redirect /admin → /portal when claims POSITIVELY say non-admin.
+    // If role is undefined (stale JWT right after sign-in), let it through
+    // and let the admin layout consult the DB — otherwise we get a loop.
+    if (isAdminRoute(req) && role && role !== "admin") {
       return NextResponse.redirect(new URL("/portal", req.url));
     }
   }
