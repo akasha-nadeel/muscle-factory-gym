@@ -12,6 +12,7 @@ type ClerkUserEvent = {
     primary_email_address_id: string | null;
     first_name: string | null;
     last_name: string | null;
+    image_url: string | null;
   };
 };
 
@@ -60,6 +61,7 @@ export async function POST(req: Request) {
     clerkUserId: evt.data.id,
     email,
     fullName,
+    photoUrl: evt.data.image_url,
     adminEmailsCsv: process.env.ADMIN_EMAILS,
   });
 

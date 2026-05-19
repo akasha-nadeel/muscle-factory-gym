@@ -34,7 +34,7 @@ export default function AuthLayout({
               width={280}
               height={64}
               priority
-              className="h-auto w-auto max-w-[280px] invert hue-rotate-180 dark:invert-0 dark:hue-rotate-0"
+              className="h-auto w-auto max-w-[280px] [filter:url(#logo-light-mode)_brightness(2)_saturate(1.5)] dark:[filter:none]"
             />
             <div className="text-xs text-muted-foreground mt-1.5">
               Member portal

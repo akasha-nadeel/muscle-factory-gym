@@ -44,7 +44,7 @@ export default async function PortalLayout({
               width={180}
               height={42}
               priority
-              className="h-7 sm:h-9 w-auto invert hue-rotate-180 dark:invert-0 dark:hue-rotate-0"
+              className="h-[26px] sm:h-[34px] w-auto [filter:url(#logo-light-mode)_brightness(2)_saturate(1.5)] dark:[filter:none]"
             />
           </Link>
           <PortalNav />

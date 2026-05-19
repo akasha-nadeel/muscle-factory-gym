@@ -17,13 +17,18 @@ export async function getCurrentUser() {
   if (claimedRole) return { userId, role: claimedRole };
   // Clerk session claims can lag for a few seconds after sign-in — the JWT
   // doesn't yet carry public_metadata.role even though the user is an admin
-  // in our DB. Without this fallback, the missing claim defaults to "member"
-  // and a logged-in admin gets caught in a /portal → /admin → /portal loop
-  // (each redirect re-reading the same stale claims). One DB query during
-  // the stale window breaks the loop; once claims refresh, this branch is
-  // never taken.
-  const profile = await getProfileByClerkId(userId);
-  return { userId, role: (profile?.role ?? "member") as Role };
+  // in our DB. Falling back to a DB lookup breaks the /portal ↔ /admin
+  // redirect loop that the stale claim would otherwise create. Wrapped in
+  // try/catch so a transient DB failure doesn't bubble up as a render-time
+  // crash — downstream code uses its own DB-backed role check anyway
+  // (requireAdminProfile / requireMemberProfile) and will surface a
+  // clearer error if the DB is actually down.
+  try {
+    const profile = await getProfileByClerkId(userId);
+    return { userId, role: (profile?.role ?? "member") as Role };
+  } catch {
+    return { userId, role: "member" as Role };
+  }
 }
 
 export async function getProfileByClerkId(
@@ -63,6 +68,7 @@ type ClerkUserShape = {
   primaryEmail: string | null;
   firstName: string | null;
   lastName: string | null;
+  imageUrl?: string | null;
 };
 
 /**
@@ -87,6 +93,7 @@ export async function _syncProfileFromClerkUnsafe(
     clerkUserId,
     email,
     fullName,
+    photoUrl: clerkUser.imageUrl ?? null,
     adminEmailsCsv,
   });
   const synced = await getProfileByClerkId(clerkUserId);
@@ -110,6 +117,7 @@ async function _syncFromLiveClerkSession(
         null,
       firstName: user.firstName,
       lastName: user.lastName,
+      imageUrl: user.imageUrl ?? null,
     },
     process.env.ADMIN_EMAILS,
   );

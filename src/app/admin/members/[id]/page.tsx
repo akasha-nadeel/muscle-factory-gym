@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { clerkClient } from "@clerk/nextjs/server";
 import { db } from "@/db";
 import { profiles, memberships, plans, payments, attendance } from "@/db/schema";
 import { eq, desc, count } from "drizzle-orm";
@@ -11,10 +12,12 @@ import { format } from "date-fns";
 import { todayInSL } from "@/lib/tz";
 import { computeOutstanding } from "@/lib/payments/outstanding";
 import { daysRemaining } from "@/lib/days-remaining";
-import { Wallet, Calendar, AlertCircle, Activity } from "lucide-react";
+import { Wallet, Calendar, AlertCircle, Activity, Mail, Phone, IdCard } from "lucide-react";
 import { AdminPage } from "@/components/admin/admin-page";
 import { StatCard } from "@/components/admin/stat-card";
 import { StatusPill } from "@/components/admin/status-pill";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { initialsOf } from "@/lib/initials";
 import { PaymentsTable } from "./_payments-table";
 import { RecordPaymentButton } from "./_record-payment-button";
 import { AttendanceTable } from "./_attendance-table";
@@ -33,6 +36,19 @@ export default async function MemberDetailPage({
     .where(eq(profiles.id, id))
     .limit(1);
   if (!member) notFound();
+
+  // Pull the member's Clerk avatar so admin sees the same image Clerk uses
+  // for emails / member's own profile. Falls back to DB photoUrl, then to
+  // an initial avatar in the JSX below if both are missing.
+  let clerkImageUrl: string | null = null;
+  try {
+    const client = await clerkClient();
+    const clerkUser = await client.users.getUser(member.clerkUserId);
+    clerkImageUrl = clerkUser.imageUrl ?? null;
+  } catch {
+    // Non-fatal — the avatar fallback renders initials.
+  }
+  const avatarUrl = clerkImageUrl ?? member.photoUrl ?? null;
 
   const history = await db
     .select({
@@ -107,26 +123,56 @@ export default async function MemberDetailPage({
       ]}
     >
       <div className="space-y-6">
-        {/* Hero row */}
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="min-w-0">
-            <div className="flex items-center gap-3">
-              <h2 className="text-2xl font-semibold truncate">
+        {/* Hero card */}
+        <div className="rounded-xl border bg-card p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-5">
+            <div className="relative shrink-0 self-center sm:self-start">
+              <Avatar className="size-20 rounded-2xl after:rounded-2xl">
+                {avatarUrl ? (
+                  <AvatarImage
+                    src={avatarUrl}
+                    alt={member.fullName}
+                    className="rounded-2xl"
+                  />
+                ) : null}
+                <AvatarFallback className="rounded-2xl text-lg font-semibold">
+                  {initialsOf(member.fullName)}
+                </AvatarFallback>
+              </Avatar>
+              <div className="absolute -bottom-2 left-1/2 -translate-x-1/2">
+                <StatusPill variant={member.status}>{member.status}</StatusPill>
+              </div>
+            </div>
+            <div className="min-w-0 flex-1 space-y-2 text-center sm:text-left pt-3 sm:pt-0">
+              <h2 className="text-2xl font-semibold leading-tight break-words">
                 {member.fullName}
               </h2>
-              <StatusPill variant={member.status}>{member.status}</StatusPill>
-            </div>
-            <div className="text-muted-foreground text-sm mt-1">
-              {member.email}
-            </div>
-            {member.gymId !== null && (
-              <div className="text-muted-foreground text-sm mt-0.5">
-                Gym ID:{" "}
-                <span className="font-mono font-medium text-foreground">
-                  {member.gymId}
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-5 gap-y-2 text-sm text-muted-foreground">
+                {member.gymId !== null && (
+                  <span className="inline-flex items-center gap-1.5">
+                    <IdCard className="size-4 shrink-0" />
+                    <span>Gym ID:</span>
+                    <span className="font-mono font-medium text-foreground">
+                      #{member.gymId}
+                    </span>
+                  </span>
+                )}
+                <span className="inline-flex items-center gap-1.5">
+                  <Mail className="size-4 shrink-0" />
+                  <span className="break-all">{member.email}</span>
+                </span>
+                {member.phone && (
+                  <span className="inline-flex items-center gap-1.5">
+                    <Phone className="size-4 shrink-0" />
+                    <span>{member.phone}</span>
+                  </span>
+                )}
+                <span className="inline-flex items-center gap-1.5">
+                  <Calendar className="size-4 shrink-0" />
+                  <span>Member since {format(member.createdAt, "MMM yyyy")}</span>
                 </span>
               </div>
-            )}
+            </div>
           </div>
         </div>
 

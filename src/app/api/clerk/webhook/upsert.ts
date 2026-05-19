@@ -7,6 +7,7 @@ export type ClerkUpsertInput = {
   clerkUserId: string;
   email: string;
   fullName: string;
+  photoUrl?: string | null;
   adminEmailsCsv: string | undefined;
 };
 
@@ -21,6 +22,7 @@ export async function upsertProfileFromClerk(input: ClerkUpsertInput) {
       clerkUserId: input.clerkUserId,
       email: input.email,
       fullName: input.fullName,
+      photoUrl: input.photoUrl ?? null,
       role,
       status,
     })
@@ -29,6 +31,7 @@ export async function upsertProfileFromClerk(input: ClerkUpsertInput) {
       set: {
         email: input.email,
         fullName: input.fullName,
+        photoUrl: input.photoUrl ?? null,
         updatedAt: sql`now()`,
       },
     });

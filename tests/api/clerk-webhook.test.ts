@@ -58,4 +58,47 @@ describe("upsertProfileFromClerk", () => {
     expect(row.role).toBe("admin");
     expect(row.status).toBe("active");
   });
+
+  it("stores photoUrl on insert and updates it on subsequent calls", async () => {
+    await upsertProfileFromClerk({
+      clerkUserId: TEST_CLERK_ID,
+      email: TEST_EMAIL,
+      fullName: "Test User",
+      photoUrl: "https://img.clerk.com/initial",
+      adminEmailsCsv: "owner@gym.lk",
+    });
+    let [row] = await db
+      .select()
+      .from(profiles)
+      .where(eq(profiles.clerkUserId, TEST_CLERK_ID));
+    expect(row.photoUrl).toBe("https://img.clerk.com/initial");
+
+    // user.updated → photoUrl changed
+    await upsertProfileFromClerk({
+      clerkUserId: TEST_CLERK_ID,
+      email: TEST_EMAIL,
+      fullName: "Test User",
+      photoUrl: "https://img.clerk.com/changed",
+      adminEmailsCsv: "owner@gym.lk",
+    });
+    [row] = await db
+      .select()
+      .from(profiles)
+      .where(eq(profiles.clerkUserId, TEST_CLERK_ID));
+    expect(row.photoUrl).toBe("https://img.clerk.com/changed");
+  });
+
+  it("treats missing photoUrl as null", async () => {
+    await upsertProfileFromClerk({
+      clerkUserId: TEST_CLERK_ID,
+      email: TEST_EMAIL,
+      fullName: "Test User",
+      adminEmailsCsv: "owner@gym.lk",
+    });
+    const [row] = await db
+      .select()
+      .from(profiles)
+      .where(eq(profiles.clerkUserId, TEST_CLERK_ID));
+    expect(row.photoUrl).toBeNull();
+  });
 });
