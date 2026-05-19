@@ -7,6 +7,8 @@ import {
 } from "@/components/ui/table";
 import { slMonthOf } from "@/lib/tz";
 import { AdminPage } from "@/components/admin/admin-page";
+import { EmptyState } from "@/components/admin/empty-state";
+import { BarChart3 } from "lucide-react";
 
 type Bucket = {
   month: string; // YYYY-MM in SL
@@ -60,6 +62,15 @@ export default async function ReportsPage() {
 
       <div>
         <h3 className="text-lg font-semibold mb-3">Monthly revenue (Sri Lanka time)</h3>
+        {sortedMonths.length === 0 ? (
+          <div className="rounded-lg border bg-card">
+            <EmptyState
+              icon={BarChart3}
+              title="No payments recorded yet"
+              description="Once members start paying, monthly totals show up here."
+            />
+          </div>
+        ) : (
         <Table>
           <TableHeader>
             <TableRow>
@@ -72,13 +83,6 @@ export default async function ReportsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {sortedMonths.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground py-6">
-                  No payments recorded yet.
-                </TableCell>
-              </TableRow>
-            )}
             {sortedMonths.map((b) => (
               <TableRow key={b.month}>
                 <TableCell className="font-medium">{b.month}</TableCell>
@@ -91,7 +95,7 @@ export default async function ReportsPage() {
                 </TableCell>
               </TableRow>
             ))}
-            {sortedMonths.length > 0 && (
+            {sortedMonths.length > 0 ? (
               <TableRow className="border-t-2">
                 <TableCell className="font-semibold">Total</TableCell>
                 <TableCell className="text-right font-semibold">{fmt(totalMembership)}</TableCell>
@@ -102,9 +106,10 @@ export default async function ReportsPage() {
                   {fmt(totalMembership + totalAdmission)}
                 </TableCell>
               </TableRow>
-            )}
+            ) : null}
           </TableBody>
         </Table>
+        )}
         <p className="text-xs text-muted-foreground mt-2">
           Sums include refunds (negative amounts) so revenue is net of refunds.
           Months bucket by Sri Lanka local time (UTC+5:30).

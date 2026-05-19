@@ -1,11 +1,15 @@
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { MemberAvatar } from "./member-avatar";
+import { EmptyState } from "./empty-state";
+import { Activity } from "lucide-react";
 
 export type RecentCheckin = {
   id: string;
   memberId: string;
   memberName: string;
+  memberPhotoUrl: string | null;
   gymId: number | null;
   checkedInAt: Date;
   source: "qr_scan" | "manual" | "kiosk_id";
@@ -25,13 +29,16 @@ export function RecentCheckinsPanel({ rows }: { rows: RecentCheckin[] }) {
       </CardHeader>
       <CardContent className="p-0">
         {rows.length === 0 ? (
-          <div className="px-6 py-8 text-sm text-muted-foreground text-center">
-            No check-ins yet.
-          </div>
+          <EmptyState icon={Activity} title="No check-ins yet" />
         ) : (
           <ul className="divide-y">
             {rows.map((c) => (
               <li key={c.id} className="px-4 py-3 flex items-center gap-3">
+                <MemberAvatar
+                  size="sm"
+                  fullName={c.memberName}
+                  photoUrl={c.memberPhotoUrl}
+                />
                 <div className="flex-1 min-w-0">
                   <Link
                     href={`/admin/members/${c.memberId}`}

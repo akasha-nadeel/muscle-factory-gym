@@ -3,11 +3,15 @@ import { formatDistanceToNow } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusPill } from "./status-pill";
+import { MemberAvatar } from "./member-avatar";
+import { EmptyState } from "./empty-state";
+import { Wallet } from "lucide-react";
 
 export type RecentPayment = {
   id: string;
   memberId: string;
   memberName: string;
+  memberPhotoUrl: string | null;
   amountLkr: string;
   method: "cash" | "bank_transfer" | "payhere";
   status: "pending" | "succeeded" | "failed" | "refunded";
@@ -25,15 +29,18 @@ export function RecentPaymentsPanel({ rows }: { rows: RecentPayment[] }) {
       </CardHeader>
       <CardContent className="p-0">
         {rows.length === 0 ? (
-          <div className="px-6 py-8 text-sm text-muted-foreground text-center">
-            No payments yet.
-          </div>
+          <EmptyState icon={Wallet} title="No payments yet" />
         ) : (
           <ul className="divide-y">
             {rows.map((p) => {
               const amount = Number(p.amountLkr);
               return (
                 <li key={p.id} className="px-4 py-3 flex items-center gap-3">
+                  <MemberAvatar
+                    size="sm"
+                    fullName={p.memberName}
+                    photoUrl={p.memberPhotoUrl}
+                  />
                   <div className="flex-1 min-w-0">
                     <Link
                       href={`/admin/members/${p.memberId}`}

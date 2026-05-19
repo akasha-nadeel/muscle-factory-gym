@@ -8,6 +8,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/admin/empty-state";
+import { Activity } from "lucide-react";
 
 export type AttendanceRow = {
   id: string;
@@ -27,6 +29,13 @@ function sourceLabel(s: AttendanceRow["source"]) {
 }
 
 export function AttendanceTable({ rows }: { rows: AttendanceRow[] }) {
+  if (rows.length === 0) {
+    return (
+      <div className="rounded-lg border bg-card">
+        <EmptyState icon={Activity} title="No check-ins yet" />
+      </div>
+    );
+  }
   return (
     <div className="rounded-lg border bg-card">
       <Table>
@@ -37,13 +46,6 @@ export function AttendanceTable({ rows }: { rows: AttendanceRow[] }) {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {rows.length === 0 && (
-            <TableRow>
-              <TableCell colSpan={2} className="text-center text-muted-foreground py-6">
-                No check-ins yet.
-              </TableCell>
-            </TableRow>
-          )}
           {rows.map((r) => (
             <TableRow key={r.id}>
               <TableCell>{format(r.checkedInAt, "PPp")}</TableCell>

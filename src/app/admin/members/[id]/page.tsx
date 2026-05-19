@@ -16,6 +16,7 @@ import { Wallet, Calendar, AlertCircle, Activity, Mail, Phone, IdCard } from "lu
 import { AdminPage } from "@/components/admin/admin-page";
 import { StatCard } from "@/components/admin/stat-card";
 import { StatusPill } from "@/components/admin/status-pill";
+import { EmptyState } from "@/components/admin/empty-state";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { initialsOf } from "@/lib/initials";
 import { PaymentsTable } from "./_payments-table";
@@ -242,6 +243,11 @@ export default async function MemberDetailPage({
         {/* Membership history */}
         <div>
           <h3 className="text-lg font-semibold mb-3">Membership history</h3>
+          {history.length === 0 ? (
+            <div className="rounded-lg border bg-card">
+              <EmptyState icon={Calendar} title="No memberships yet" />
+            </div>
+          ) : (
           <div className="rounded-lg border bg-card">
             <Table>
               <TableHeader>
@@ -253,16 +259,6 @@ export default async function MemberDetailPage({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {history.length === 0 && (
-                  <TableRow>
-                    <TableCell
-                      colSpan={4}
-                      className="text-center text-muted-foreground py-6"
-                    >
-                      No memberships yet.
-                    </TableCell>
-                  </TableRow>
-                )}
                 {history.map((h) => (
                   <TableRow key={h.id}>
                     <TableCell className="font-medium">{h.planName}</TableCell>
@@ -278,6 +274,7 @@ export default async function MemberDetailPage({
               </TableBody>
             </Table>
           </div>
+          )}
         </div>
       </div>
     </AdminPage>

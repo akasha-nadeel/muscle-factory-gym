@@ -9,6 +9,8 @@ import {
 import { StatusPill } from "@/components/admin/status-pill";
 import { format } from "date-fns";
 import { RefundButton } from "./_refund-button";
+import { EmptyState } from "@/components/admin/empty-state";
+import { Wallet } from "lucide-react";
 
 type Row = {
   id: string;
@@ -27,6 +29,13 @@ export function PaymentsTable({
   rows: Row[];
   refundedReferences: Set<string>;
 }) {
+  if (rows.length === 0) {
+    return (
+      <div className="rounded-lg border bg-card">
+        <EmptyState icon={Wallet} title="No payments yet" />
+      </div>
+    );
+  }
   return (
     <Table>
       <TableHeader>
@@ -41,16 +50,6 @@ export function PaymentsTable({
         </TableRow>
       </TableHeader>
       <TableBody>
-        {rows.length === 0 && (
-          <TableRow>
-            <TableCell
-              colSpan={7}
-              className="text-center text-muted-foreground py-6"
-            >
-              No payments yet.
-            </TableCell>
-          </TableRow>
-        )}
         {rows.map((r) => {
           const num = Number(r.amountLkr);
           const isRefundRow = r.status === "refunded";

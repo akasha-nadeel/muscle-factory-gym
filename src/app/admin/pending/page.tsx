@@ -8,6 +8,9 @@ import {
 import { format } from "date-fns";
 import { ApproveButton } from "./_approve-button";
 import { AdminPage } from "@/components/admin/admin-page";
+import { MemberAvatar } from "@/components/admin/member-avatar";
+import { EmptyState } from "@/components/admin/empty-state";
+import { UserCheck } from "lucide-react";
 
 export default async function PendingPage() {
   await requireAdminProfile();
@@ -26,9 +29,19 @@ export default async function PendingPage() {
     <AdminPage breadcrumbs={[{ label: "Pending" }]}>
     <div className="space-y-6">
       <h2 className="text-2xl font-semibold">Pending approvals</h2>
+      {pending.length === 0 ? (
+        <div className="rounded-lg border bg-card">
+          <EmptyState
+            icon={UserCheck}
+            title="All caught up"
+            description="No pending approvals right now."
+          />
+        </div>
+      ) : (
       <Table>
         <TableHeader>
           <TableRow>
+            <TableHead className="w-12"></TableHead>
             <TableHead>Name</TableHead>
             <TableHead>Email</TableHead>
             <TableHead className="w-40">Signed up</TableHead>
@@ -36,15 +49,11 @@ export default async function PendingPage() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {pending.length === 0 && (
-            <TableRow>
-              <TableCell colSpan={4} className="text-center text-muted-foreground py-6">
-                No pending approvals.
-              </TableCell>
-            </TableRow>
-          )}
           {pending.map((m) => (
             <TableRow key={m.id}>
+              <TableCell>
+                <MemberAvatar size="sm" fullName={m.fullName} photoUrl={m.photoUrl} />
+              </TableCell>
               <TableCell className="font-medium">{m.fullName}</TableCell>
               <TableCell>{m.email}</TableCell>
               <TableCell>{format(m.createdAt, "PP")}</TableCell>
@@ -59,6 +68,7 @@ export default async function PendingPage() {
           ))}
         </TableBody>
       </Table>
+      )}
     </div>
     </AdminPage>
   );

@@ -20,6 +20,8 @@ import {
 import { PlanForm } from "./_plan-form";
 import { setPlanActive } from "./actions";
 import { toast } from "sonner";
+import { EmptyState } from "@/components/admin/empty-state";
+import { Tag } from "lucide-react";
 
 type Plan = {
   id: string;
@@ -61,6 +63,16 @@ export function PlansTable({ plans }: { plans: Plan[] }) {
         </Dialog>
       </div>
 
+      {plans.length === 0 ? (
+        <div className="rounded-lg border bg-card">
+          <EmptyState
+            icon={Tag}
+            title="No plans yet"
+            description="Create your first membership plan to get started."
+            action={{ label: "New plan", onClick: () => setCreating(true) }}
+          />
+        </div>
+      ) : (
       <Table>
         <TableHeader>
           <TableRow>
@@ -72,13 +84,6 @@ export function PlansTable({ plans }: { plans: Plan[] }) {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {plans.length === 0 && (
-            <TableRow>
-              <TableCell colSpan={5} className="text-center text-muted-foreground py-6">
-                No plans yet. Create one to get started.
-              </TableCell>
-            </TableRow>
-          )}
           {plans.map((p) => (
             <TableRow key={p.id} className={p.isActive ? "" : "opacity-60"}>
               <TableCell className="font-medium">{p.name}</TableCell>
@@ -112,6 +117,7 @@ export function PlansTable({ plans }: { plans: Plan[] }) {
           ))}
         </TableBody>
       </Table>
+      )}
 
       <Dialog open={editing !== null} onOpenChange={(o) => !o && setEditing(null)}>
         <DialogContent>

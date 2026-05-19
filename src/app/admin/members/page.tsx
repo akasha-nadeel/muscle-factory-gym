@@ -15,6 +15,9 @@ import { Button } from "@/components/ui/button";
 import { MemberFilters } from "./_filters";
 import { AdminPage } from "@/components/admin/admin-page";
 import { StatusPill } from "@/components/admin/status-pill";
+import { MemberAvatar } from "@/components/admin/member-avatar";
+import { EmptyState } from "@/components/admin/empty-state";
+import { Users } from "lucide-react";
 
 const PAGE_SIZE = 25;
 
@@ -81,9 +84,21 @@ export default async function MembersPage({
         </div>
         <MemberFilters status={status} q={q} />
         <div className="rounded-lg border bg-card">
-          <Table>
+          {rows.length === 0 ? (
+            <EmptyState
+              icon={Users}
+              title="No members match your filters"
+              description={
+                q || status
+                  ? "Try clearing filters to see all members."
+                  : "Once new members sign up and you approve them, they'll appear here."
+              }
+            />
+          ) : (
+            <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-12"></TableHead>
                 <TableHead className="w-24">Gym ID</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
@@ -93,18 +108,15 @@ export default async function MembersPage({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {rows.length === 0 && (
-                <TableRow>
-                  <TableCell
-                    colSpan={6}
-                    className="text-center text-muted-foreground py-6"
-                  >
-                    No members match your filters.
-                  </TableCell>
-                </TableRow>
-              )}
               {rows.map((m) => (
                 <TableRow key={m.id}>
+                  <TableCell>
+                    <MemberAvatar
+                      size="sm"
+                      fullName={m.fullName}
+                      photoUrl={m.photoUrl}
+                    />
+                  </TableCell>
                   <TableCell className="font-mono tabular-nums">
                     {m.gymId ?? "—"}
                   </TableCell>
@@ -129,6 +141,7 @@ export default async function MembersPage({
               ))}
             </TableBody>
           </Table>
+          )}
         </div>
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 text-sm text-muted-foreground">
           <span>
