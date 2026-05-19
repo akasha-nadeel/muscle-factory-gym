@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { db } from "@/db";
 import { profiles } from "@/db/schema";
-import { and, eq, ilike, or, count, desc } from "drizzle-orm";
+import { and, eq, ilike, or, count, asc, desc } from "drizzle-orm";
+import type { SQL } from "drizzle-orm";
 import { requireAdminProfile } from "@/lib/auth";
 import {
   Table,
@@ -17,14 +18,24 @@ import { AdminPage } from "@/components/admin/admin-page";
 import { StatusPill } from "@/components/admin/status-pill";
 import { MemberAvatar } from "@/components/admin/member-avatar";
 import { EmptyState } from "@/components/admin/empty-state";
+import { SortHeader } from "@/components/admin/sort-header";
 import { Users } from "lucide-react";
+import {
+  parseSortParams,
+  nextSortFor,
+  type ParsedSort,
+} from "@/lib/sort-params";
 
 const PAGE_SIZE = 25;
+const SORT_FIELDS = ["gymId", "fullName", "status", "createdAt"] as const;
+type SortField = (typeof SORT_FIELDS)[number];
 
 type SearchParams = {
   status?: string;
   q?: string;
   page?: string;
+  sort?: string;
+  dir?: string;
 };
 
 export default async function MembersPage({
@@ -41,6 +52,11 @@ export default async function MembersPage({
       : undefined;
   const q = (sp.q ?? "").trim();
   const page = Math.max(1, Number(sp.page ?? "1") || 1);
+  const sort: ParsedSort<SortField> = parseSortParams(
+    sp,
+    SORT_FIELDS,
+    { field: "createdAt", dir: "desc" },
+  );
 
   const filters = [eq(profiles.role, "member")];
   if (status) filters.push(eq(profiles.status, status));
@@ -57,23 +73,51 @@ export default async function MembersPage({
     .from(profiles)
     .where(whereExpr);
 
+  const orderColumn = {
+    gymId: profiles.gymId,
+    fullName: profiles.fullName,
+    status: profiles.status,
+    createdAt: profiles.createdAt,
+  }[sort.field];
+  const orderBy: SQL = sort.dir === "asc" ? asc(orderColumn) : desc(orderColumn);
+
   const rows = await db
     .select()
     .from(profiles)
     .where(whereExpr)
-    .orderBy(desc(profiles.createdAt))
+    .orderBy(orderBy)
     .limit(PAGE_SIZE)
     .offset((page - 1) * PAGE_SIZE);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
-  function pageHref(p: number) {
+  function buildHref(overrides: {
+    page?: number;
+    sort?: SortField;
+    dir?: "asc" | "desc";
+  }) {
     const params = new URLSearchParams();
     if (status) params.set("status", status);
     if (q) params.set("q", q);
-    if (p > 1) params.set("page", String(p));
+    const nextPage = overrides.page ?? page;
+    if (nextPage > 1) params.set("page", String(nextPage));
+    const nextField = overrides.sort ?? sort.field;
+    const nextDir = overrides.dir ?? sort.dir;
+    if (!(nextField === "createdAt" && nextDir === "desc")) {
+      params.set("sort", nextField);
+      params.set("dir", nextDir);
+    }
     const qs = params.toString();
     return qs ? `/admin/members?${qs}` : "/admin/members";
+  }
+
+  function sortHrefFor(field: SortField): string {
+    const next = nextSortFor(sort, field);
+    return buildHref({ page: 1, sort: next.field, dir: next.dir });
+  }
+
+  function pageHref(p: number) {
+    return buildHref({ page: p });
   }
 
   return (
@@ -95,15 +139,70 @@ export default async function MembersPage({
               }
             />
           ) : (
+          <>
+          {/* Mobile: stacked cards (<sm) */}
+          <ul className="sm:hidden divide-y">
+            {rows.map((m) => (
+              <li key={m.id} className="p-3">
+                <Link
+                  href={`/admin/members/${m.id}`}
+                  className="flex items-center gap-3"
+                >
+                  <MemberAvatar
+                    size="md"
+                    fullName={m.fullName}
+                    photoUrl={m.photoUrl}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium truncate">{m.fullName}</span>
+                      <StatusPill variant={m.status}>{m.status}</StatusPill>
+                    </div>
+                    <div className="text-xs text-muted-foreground truncate mt-0.5">
+                      {m.gymId !== null && (
+                        <span className="font-mono mr-2">#{m.gymId}</span>
+                      )}
+                      {m.email}
+                    </div>
+                  </div>
+                </Link>
+              </li>
+            ))}
+          </ul>
+          {/* Desktop: table (sm+) */}
+          <div className="hidden sm:block">
             <Table>
             <TableHeader>
               <TableRow>
                 <TableHead className="w-12"></TableHead>
-                <TableHead className="w-24">Gym ID</TableHead>
-                <TableHead>Name</TableHead>
+                <SortHeader
+                  field="gymId"
+                  label="Gym ID"
+                  current={sort}
+                  hrefFor={sortHrefFor}
+                  className="w-24"
+                />
+                <SortHeader
+                  field="fullName"
+                  label="Name"
+                  current={sort}
+                  hrefFor={sortHrefFor}
+                />
                 <TableHead>Email</TableHead>
-                <TableHead className="w-32">Status</TableHead>
-                <TableHead className="w-40">Joined</TableHead>
+                <SortHeader
+                  field="status"
+                  label="Status"
+                  current={sort}
+                  hrefFor={sortHrefFor}
+                  className="w-32"
+                />
+                <SortHeader
+                  field="createdAt"
+                  label="Joined"
+                  current={sort}
+                  hrefFor={sortHrefFor}
+                  className="w-40"
+                />
                 <TableHead className="w-24 text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -141,6 +240,8 @@ export default async function MembersPage({
               ))}
             </TableBody>
           </Table>
+          </div>
+          </>
           )}
         </div>
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 text-sm text-muted-foreground">

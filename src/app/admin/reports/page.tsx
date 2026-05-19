@@ -9,6 +9,7 @@ import { slMonthOf } from "@/lib/tz";
 import { AdminPage } from "@/components/admin/admin-page";
 import { EmptyState } from "@/components/admin/empty-state";
 import { BarChart3 } from "lucide-react";
+import { ReportsChart } from "@/components/admin/reports-chart";
 
 type Bucket = {
   month: string; // YYYY-MM in SL
@@ -60,8 +61,8 @@ export default async function ReportsPage() {
     <div className="space-y-8">
       <h2 className="text-2xl font-semibold">Reports</h2>
 
-      <div>
-        <h3 className="text-lg font-semibold mb-3">Monthly revenue (Sri Lanka time)</h3>
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold">Monthly revenue (Sri Lanka time)</h3>
         {sortedMonths.length === 0 ? (
           <div className="rounded-lg border bg-card">
             <EmptyState
@@ -71,6 +72,8 @@ export default async function ReportsPage() {
             />
           </div>
         ) : (
+          <>
+          <ReportsChart buckets={sortedMonths} />
         <Table>
           <TableHeader>
             <TableRow>
@@ -109,8 +112,9 @@ export default async function ReportsPage() {
             ) : null}
           </TableBody>
         </Table>
+          </>
         )}
-        <p className="text-xs text-muted-foreground mt-2">
+        <p className="text-xs text-muted-foreground">
           Sums include refunds (negative amounts) so revenue is net of refunds.
           Months bucket by Sri Lanka local time (UTC+5:30).
         </p>

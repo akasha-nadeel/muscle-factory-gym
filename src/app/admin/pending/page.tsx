@@ -38,36 +38,71 @@ export default async function PendingPage() {
           />
         </div>
       ) : (
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-12"></TableHead>
-            <TableHead>Name</TableHead>
-            <TableHead>Email</TableHead>
-            <TableHead className="w-40">Signed up</TableHead>
-            <TableHead className="w-40 text-right">Action</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {pending.map((m) => (
-            <TableRow key={m.id}>
-              <TableCell>
-                <MemberAvatar size="sm" fullName={m.fullName} photoUrl={m.photoUrl} />
-              </TableCell>
-              <TableCell className="font-medium">{m.fullName}</TableCell>
-              <TableCell>{m.email}</TableCell>
-              <TableCell>{format(m.createdAt, "PP")}</TableCell>
-              <TableCell className="text-right">
+        <div className="rounded-lg border bg-card">
+          {/* Mobile cards */}
+          <ul className="sm:hidden divide-y">
+            {pending.map((m) => (
+              <li key={m.id} className="p-3 flex items-center gap-3">
+                <MemberAvatar
+                  size="md"
+                  fullName={m.fullName}
+                  photoUrl={m.photoUrl}
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium truncate">{m.fullName}</div>
+                  <div className="text-xs text-muted-foreground truncate">
+                    {m.email}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-0.5">
+                    {format(m.createdAt, "PP")}
+                  </div>
+                </div>
                 <ApproveButton
                   memberId={m.id}
                   memberName={m.fullName}
                   plans={activePlans}
                 />
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+              </li>
+            ))}
+          </ul>
+          {/* Desktop table */}
+          <div className="hidden sm:block">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-12"></TableHead>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead className="w-40">Signed up</TableHead>
+                  <TableHead className="w-40 text-right">Action</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {pending.map((m) => (
+                  <TableRow key={m.id}>
+                    <TableCell>
+                      <MemberAvatar
+                        size="sm"
+                        fullName={m.fullName}
+                        photoUrl={m.photoUrl}
+                      />
+                    </TableCell>
+                    <TableCell className="font-medium">{m.fullName}</TableCell>
+                    <TableCell>{m.email}</TableCell>
+                    <TableCell>{format(m.createdAt, "PP")}</TableCell>
+                    <TableCell className="text-right">
+                      <ApproveButton
+                        memberId={m.id}
+                        memberName={m.fullName}
+                        plans={activePlans}
+                      />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
       )}
     </div>
     </AdminPage>
