@@ -1,119 +1,114 @@
 "use client";
 
 import {
-  Bar,
-  BarChart,
-  CartesianGrid,
+  Cell,
+  Legend,
+  Pie,
+  PieChart,
   ResponsiveContainer,
   Tooltip,
-  XAxis,
-  YAxis,
 } from "recharts";
 
 export type ReportsChartBucket = {
-  month: string; // YYYY-MM in SL
+  month: string;
   membershipNet: number;
   admissionNet: number;
+};
+
+const COLORS = {
+  membership: "oklch(0.65 0.16 230)", // blue
+  admission: "oklch(0.7 0.13 180)", // teal
 };
 
 type TooltipPayload = {
   value: number;
   name: string;
-  color: string;
+  payload: { name: string; value: number; percent: number };
 };
 
 function CustomTooltip({
   active,
   payload,
-  label,
 }: {
   active?: boolean;
   payload?: TooltipPayload[];
-  label?: string;
 }) {
   if (!active || !payload || payload.length === 0) return null;
-  const total = payload.reduce((s, p) => s + p.value, 0);
+  const p = payload[0]!;
   return (
     <div className="rounded-md border bg-card px-3 py-2 text-xs shadow-md">
-      <div className="font-medium mb-1">{label}</div>
-      {payload.map((p) => (
-        <div key={p.name} className="flex items-center gap-2">
-          <span
-            className="inline-block size-2 rounded-sm"
-            style={{ backgroundColor: p.color }}
-          />
-          <span className="text-muted-foreground">{p.name}</span>
-          <span className="ml-auto tabular-nums">
-            {p.value.toLocaleString()}
-          </span>
-        </div>
-      ))}
-      <div className="mt-1 pt-1 border-t flex items-center gap-2">
-        <span className="font-medium">Total</span>
-        <span className="ml-auto font-medium tabular-nums">
-          {total.toLocaleString()}
+      <div className="font-medium mb-0.5">{p.name}</div>
+      <div className="text-muted-foreground tabular-nums">
+        LKR {p.value.toLocaleString()}{" "}
+        <span className="text-foreground/70">
+          ({(p.payload.percent * 100).toFixed(1)}%)
         </span>
       </div>
     </div>
   );
 }
 
-function formatY(v: number): string {
-  if (Math.abs(v) >= 1000) return `${Math.round(v / 1000)}k`;
-  return String(v);
-}
-
 export function ReportsChart({ buckets }: { buckets: ReportsChartBucket[] }) {
-  // Page sorts months desc for the table; chart wants chronological ascending.
-  const data = [...buckets].reverse();
+  const totalMembership = buckets.reduce((s, b) => s + b.membershipNet, 0);
+  const totalAdmission = buckets.reduce((s, b) => s + b.admissionNet, 0);
+  const grand = totalMembership + totalAdmission;
+
+  const data = [
+    {
+      name: "Membership",
+      value: Math.max(0, totalMembership),
+      color: COLORS.membership,
+      percent: grand > 0 ? totalMembership / grand : 0,
+    },
+    {
+      name: "Admission",
+      value: Math.max(0, totalAdmission),
+      color: COLORS.admission,
+      percent: grand > 0 ? totalAdmission / grand : 0,
+    },
+  ].filter((d) => d.value > 0);
+
   return (
     <div className="rounded-lg border bg-card p-4 sm:p-5">
-      <h4 className="text-sm font-medium mb-3">Revenue by month</h4>
+      <div className="flex items-start justify-between gap-4 mb-4">
+        <h4 className="text-sm font-medium">Revenue breakdown</h4>
+        <div className="text-right">
+          <div className="text-xs uppercase tracking-wide text-muted-foreground">
+            Total
+          </div>
+          <div className="text-lg font-semibold tabular-nums">
+            LKR {grand.toLocaleString()}
+          </div>
+        </div>
+      </div>
       <ResponsiveContainer width="100%" height={260}>
-        <BarChart
-          data={data}
-          margin={{ top: 8, right: 12, left: 0, bottom: 4 }}
-        >
-          <CartesianGrid
-            strokeDasharray="3 3"
-            stroke="currentColor"
-            className="text-muted-foreground/20"
-            vertical={false}
+        <PieChart>
+          <Pie
+            data={data}
+            dataKey="value"
+            nameKey="name"
+            cx="50%"
+            cy="50%"
+            innerRadius={60}
+            outerRadius={100}
+            paddingAngle={2}
+            strokeWidth={0}
+          >
+            {data.map((d) => (
+              <Cell key={d.name} fill={d.color} />
+            ))}
+          </Pie>
+          <Tooltip content={<CustomTooltip />} />
+          <Legend
+            verticalAlign="bottom"
+            iconType="circle"
+            iconSize={8}
+            wrapperStyle={{ fontSize: 12 }}
+            formatter={(value: string) => (
+              <span className="text-muted-foreground">{value}</span>
+            )}
           />
-          <XAxis
-            dataKey="month"
-            tick={{ fontSize: 11, fill: "currentColor" }}
-            tickLine={false}
-            axisLine={false}
-            className="text-muted-foreground"
-          />
-          <YAxis
-            tick={{ fontSize: 11, fill: "currentColor" }}
-            tickFormatter={formatY}
-            tickLine={false}
-            axisLine={false}
-            width={50}
-            className="text-muted-foreground"
-          />
-          <Tooltip
-            cursor={{ fill: "currentColor", fillOpacity: 0.06 }}
-            content={<CustomTooltip />}
-          />
-          <Bar
-            dataKey="membershipNet"
-            name="Membership"
-            stackId="rev"
-            fill="oklch(0.6 0.22 27)"
-            radius={[0, 0, 0, 0]}
-          />
-          <Bar
-            dataKey="admissionNet"
-            name="Admission"
-            stackId="rev"
-            fill="oklch(0.6 0.22 27 / 50%)"
-            radius={[4, 4, 0, 0]}
-          />
-        </BarChart>
+        </PieChart>
       </ResponsiveContainer>
     </div>
   );
