@@ -3,12 +3,25 @@ import type { LucideIcon } from "lucide-react";
 
 export type StatCardAccent = "red" | "green" | "amber" | "blue" | "default";
 
-const accentBg: Record<StatCardAccent, string> = {
-  red: "bg-status-danger-bg text-status-danger",
-  green: "bg-status-success-bg text-status-success",
-  amber: "bg-status-warning-bg text-status-warning",
-  blue: "bg-primary/10 text-primary",
+/**
+ * Explicit Tailwind colors (not theme tokens) so the cards look the same in
+ * light and dark mode. Using --primary etc. would tint Total Revenue with
+ * the brand red, which is not what we want.
+ */
+const iconBg: Record<StatCardAccent, string> = {
+  red: "bg-rose-500/25 text-rose-500",
+  green: "bg-emerald-500/25 text-emerald-500",
+  amber: "bg-amber-500/25 text-amber-500",
+  blue: "bg-sky-500/25 text-sky-500",
   default: "bg-muted text-muted-foreground",
+};
+
+const cardSurface: Record<StatCardAccent, string> = {
+  red: "bg-rose-500/10 border-rose-500/30",
+  green: "bg-emerald-500/10 border-emerald-500/30",
+  amber: "bg-amber-500/10 border-amber-500/30",
+  blue: "bg-sky-500/10 border-sky-500/30",
+  default: "bg-card",
 };
 
 export function StatCard({
@@ -30,14 +43,15 @@ export function StatCard({
     <div
       data-slot="stat-card"
       className={cn(
-        "rounded-xl border bg-card p-5 flex items-start gap-4 transition-colors",
+        "rounded-xl border p-5 flex items-start gap-4 transition-colors",
+        cardSurface[accentColor],
         className,
       )}
     >
       <div
         className={cn(
           "size-10 rounded-lg flex items-center justify-center shrink-0",
-          accentBg[accentColor],
+          iconBg[accentColor],
         )}
       >
         <Icon className="size-5" />

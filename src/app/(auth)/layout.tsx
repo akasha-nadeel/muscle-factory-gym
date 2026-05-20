@@ -29,7 +29,7 @@ export default function AuthLayout({
         <div className="w-full max-w-md flex flex-col items-center gap-6">
           <Link href="/" className="text-center flex flex-col items-center">
             <Image
-              src="/logo.png"
+              src="/logo.webp"
               alt="Muscle Factory Gym"
               width={280}
               height={64}

@@ -235,7 +235,7 @@ export default async function AdminHome({
             label="Total revenue"
             value={`LKR ${revenue.toLocaleString()}`}
             caption="This month"
-            accentColor="red"
+            accentColor="blue"
           />
           <StatCard
             icon={Users}

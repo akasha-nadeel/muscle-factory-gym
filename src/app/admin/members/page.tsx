@@ -231,7 +231,7 @@ export default async function MembersPage({
                     <Button
                       render={<Link href={`/admin/members/${m.id}`} />}
                       size="sm"
-                      variant="ghost"
+                      variant="outline"
                     >
                       View
                     </Button>

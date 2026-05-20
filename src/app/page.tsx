@@ -33,7 +33,7 @@ export default async function Home() {
         <header>
           <div className="max-w-6xl mx-auto px-4 md:px-6 h-14 flex items-center justify-between">
             <Image
-              src="/logo.png"
+              src="/logo.webp"
               alt="Muscle Factory Gym"
               width={180}
               height={41}
@@ -60,7 +60,7 @@ export default async function Home() {
         {/* Hero */}
         <section className="max-w-6xl mx-auto px-4 md:px-6 pt-2 md:pt-4 pb-16 md:pb-20 text-center">
           <Image
-            src="/hero-logo.png"
+            src="/hero-logo.webp"
             alt="Muscle Factory Gym"
             width={822}
             height={760}

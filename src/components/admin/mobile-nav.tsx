@@ -56,16 +56,16 @@ export function MobileNav() {
           <aside
             role="dialog"
             aria-modal="true"
-            className="absolute inset-y-0 left-0 w-64 bg-sidebar text-sidebar-foreground border-r border-sidebar-border flex flex-col shadow-xl"
+            className="dark absolute inset-y-0 left-0 w-64 bg-sidebar text-sidebar-foreground border-r border-sidebar-border flex flex-col shadow-xl"
           >
             <div className="h-14 px-4 border-b border-sidebar-border flex items-center justify-between gap-2">
               <Image
-                src="/logo.png"
+                src="/logo.webp"
                 alt="Muscle Factory Gym"
                 width={180}
                 height={42}
                 priority
-                className="h-[34px] w-auto [filter:url(#logo-light-mode)_brightness(2)_saturate(1.5)] dark:[filter:none]"
+                className="h-[34px] w-auto"
               />
               <button
                 type="button"

@@ -39,7 +39,7 @@ export default async function PortalLayout({
             aria-label="Muscle Factory Gym — Home"
           >
             <Image
-              src="/logo.png"
+              src="/logo.webp"
               alt="Muscle Factory Gym"
               width={180}
               height={42}
