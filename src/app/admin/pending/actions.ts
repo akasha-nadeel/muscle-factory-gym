@@ -9,6 +9,8 @@ import { requireAdminProfile } from "@/lib/auth";
 import { computeMembershipWindow } from "@/lib/memberships/window";
 import { validatePaymentInput } from "@/lib/payments/validate";
 import { _assignNextGymIdUnsafe } from "@/lib/gym-id";
+import { sendWelcomeEmail } from "@/lib/email/send-welcome";
+import { desc } from "drizzle-orm";
 
 export type ApprovePaymentInput = {
   amountLkr: string;
@@ -195,6 +197,30 @@ export async function approveMember(
       await client.users.updateUserMetadata(member.clerkUserId, {
         publicMetadata: { role: member.role, status: "active" },
       });
+
+      // Best-effort welcome email. Errors NEVER abort the approval —
+      // sendWelcomeEmail swallows them internally and logs to stderr.
+      const [latestMembership] = await db
+        .select({
+          startDate: memberships.startDate,
+          endDate: memberships.endDate,
+          planName: plans.name,
+        })
+        .from(memberships)
+        .innerJoin(plans, eq(plans.id, memberships.planId))
+        .where(eq(memberships.memberId, member.id))
+        .orderBy(desc(memberships.endDate))
+        .limit(1);
+      if (latestMembership) {
+        await sendWelcomeEmail({
+          toEmail: member.email,
+          memberName: member.fullName,
+          gymId: member.gymId,
+          planName: latestMembership.planName,
+          startDate: latestMembership.startDate,
+          endDate: latestMembership.endDate,
+        });
+      }
     }
     revalidatePath("/admin");
     revalidatePath("/admin/pending");
