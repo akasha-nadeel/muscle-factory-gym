@@ -38,7 +38,7 @@ export default async function Home() {
               width={180}
               height={41}
               priority
-              className="h-auto w-auto max-h-9 [filter:url(#logo-light-mode)_brightness(2)_saturate(1.5)] dark:[filter:none]"
+              className="h-auto w-auto max-h-7 sm:max-h-9 [filter:url(#logo-light-mode)_brightness(2)_saturate(1.5)] dark:[filter:none]"
             />
             <div className="flex items-center gap-2">
               <Link
