@@ -58,7 +58,15 @@ export default async function Home() {
         </header>
 
         {/* Hero */}
-        <section className="max-w-6xl mx-auto px-4 md:px-6 py-20 md:py-28 text-center">
+        <section className="max-w-6xl mx-auto px-4 md:px-6 pt-12 md:pt-16 pb-20 md:pb-28 text-center">
+          <Image
+            src="/hero-logo.png"
+            alt="Muscle Factory Gym"
+            width={822}
+            height={760}
+            priority
+            className="mx-auto h-auto w-full max-w-[280px] md:max-w-[360px] mb-6 md:mb-8 [filter:url(#logo-light-mode)_brightness(2)_saturate(1.5)] dark:[filter:none]"
+          />
           <h1 className="text-4xl md:text-6xl font-semibold tracking-tight">
             Train hard.{" "}
             <span className="text-primary">Track everything.</span>
