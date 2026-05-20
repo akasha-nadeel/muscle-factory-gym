@@ -22,23 +22,31 @@ const items: { href: string; label: string; icon: LucideIcon }[] = [
   { href: "/admin/reports", label: "Reports", icon: BarChart3 },
 ];
 
-// Renders the icon + label + trailing indicator. Must be a child of <Link>
-// because useLinkStatus() reads pending state from the enclosing Link, giving
-// us instant visual feedback before the server even starts rendering.
+// Renders the icon + label + (optional badge) + trailing indicator. Must be a
+// child of <Link> because useLinkStatus() reads pending state from the
+// enclosing Link, giving us instant visual feedback before the server even
+// starts rendering.
 function NavLinkContents({
   active,
   Icon,
   label,
+  badge,
 }: {
   active: boolean;
   Icon: LucideIcon;
   label: string;
+  badge?: number;
 }) {
   const { pending } = useLinkStatus();
   return (
     <>
       <Icon className="size-4 shrink-0" />
       <span className="flex-1">{label}</span>
+      {badge !== undefined && badge > 0 && (
+        <span className="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full bg-primary text-primary-foreground text-xs font-semibold tabular-nums">
+          {badge}
+        </span>
+      )}
       {pending ? (
         <Loader2 className="size-4 shrink-0 animate-spin" />
       ) : (
@@ -53,7 +61,13 @@ function NavLinkContents({
   );
 }
 
-export function NavItems({ onNavigate }: { onNavigate?: () => void }) {
+export function NavItems({
+  onNavigate,
+  pendingCount,
+}: {
+  onNavigate?: () => void;
+  pendingCount?: number;
+}) {
   const pathname = usePathname();
   return (
     <nav className="flex-1 px-3 py-4 flex flex-col gap-1">
@@ -62,6 +76,8 @@ export function NavItems({ onNavigate }: { onNavigate?: () => void }) {
           item.href === "/admin"
             ? pathname === "/admin"
             : pathname.startsWith(item.href);
+        const badge =
+          item.href === "/admin/pending" ? pendingCount : undefined;
         return (
           <Link
             key={item.href}
@@ -79,6 +95,7 @@ export function NavItems({ onNavigate }: { onNavigate?: () => void }) {
               active={active}
               Icon={item.icon}
               label={item.label}
+              badge={badge}
             />
           </Link>
         );

@@ -1,7 +1,9 @@
 import Image from "next/image";
 import { NavItems } from "./nav-items";
+import { getPendingMemberCount } from "@/lib/admin/pending-count";
 
-export function Sidebar() {
+export async function Sidebar() {
+  const pendingCount = await getPendingMemberCount();
   return (
     <aside className="dark hidden md:flex w-60 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
       <div className="h-14 px-4 border-b border-sidebar-border flex items-center justify-center">
@@ -14,7 +16,7 @@ export function Sidebar() {
           className="h-[34px] w-auto"
         />
       </div>
-      <NavItems />
+      <NavItems pendingCount={pendingCount} />
     </aside>
   );
 }

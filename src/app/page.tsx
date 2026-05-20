@@ -4,16 +4,10 @@ import { redirect } from "next/navigation";
 import { buttonVariants } from "@/components/ui/button";
 import { getCurrentUser } from "@/lib/auth";
 
-// Same theme-init script as admin/auth — apply dark by default.
+// Landing page is locked to dark theme — ignore any saved 'light' preference
+// from /portal so the marketing surface stays visually consistent.
 const themeInitScript = `
-(function() {
-  try {
-    var t = localStorage.getItem('theme');
-    if (t !== 'light') document.documentElement.classList.add('dark');
-  } catch (e) {
-    document.documentElement.classList.add('dark');
-  }
-})();
+document.documentElement.classList.add('dark');
 `;
 
 export default async function Home() {
@@ -38,7 +32,7 @@ export default async function Home() {
               width={180}
               height={41}
               priority
-              className="h-auto w-auto max-h-7 sm:max-h-9 [filter:url(#logo-light-mode)_brightness(2)_saturate(1.5)] dark:[filter:none]"
+              className="h-auto w-auto max-h-7 sm:max-h-9"
             />
             <div className="flex items-center gap-2">
               <Link
@@ -58,14 +52,14 @@ export default async function Home() {
         </header>
 
         {/* Hero */}
-        <section className="max-w-6xl mx-auto px-4 md:px-6 pt-2 md:pt-4 pb-16 md:pb-20 text-center">
+        <section className="max-w-6xl mx-auto px-4 md:px-6 pt-10 md:pt-4 pb-16 md:pb-20 text-center">
           <Image
             src="/hero-logo.webp"
             alt="Muscle Factory Gym"
             width={822}
             height={760}
             priority
-            className="mx-auto h-auto w-full max-w-[240px] md:max-w-[340px] mb-4 md:mb-6 [filter:url(#logo-light-mode)_brightness(2)_saturate(1.5)] dark:[filter:none]"
+            className="mx-auto h-auto w-full max-w-[240px] md:max-w-[340px] mb-4 md:mb-6"
           />
           <h1 className="text-4xl md:text-6xl font-semibold tracking-tight">
             Train hard.{" "}

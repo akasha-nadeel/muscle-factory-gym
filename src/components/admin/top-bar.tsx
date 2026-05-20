@@ -3,11 +3,13 @@ import { Breadcrumbs, type BreadcrumbItem } from "./breadcrumbs";
 import { ThemeToggle } from "./theme-toggle";
 import { MemberSearch } from "./member-search";
 import { MobileNav } from "./mobile-nav";
+import { getPendingMemberCount } from "@/lib/admin/pending-count";
 
-export function TopBar({ breadcrumbs }: { breadcrumbs: BreadcrumbItem[] }) {
+export async function TopBar({ breadcrumbs }: { breadcrumbs: BreadcrumbItem[] }) {
+  const pendingCount = await getPendingMemberCount();
   return (
     <header className="sticky top-0 z-20 h-14 border-b bg-card flex items-center px-3 md:px-6 gap-2 md:gap-4">
-      <MobileNav />
+      <MobileNav pendingCount={pendingCount} />
       <div className="min-w-0 flex-1">
         <Breadcrumbs items={breadcrumbs} />
       </div>

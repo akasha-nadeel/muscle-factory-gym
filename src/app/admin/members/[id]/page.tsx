@@ -12,7 +12,7 @@ import { format } from "date-fns";
 import { todayInSL } from "@/lib/tz";
 import { computeOutstanding } from "@/lib/payments/outstanding";
 import { daysRemaining } from "@/lib/days-remaining";
-import { Wallet, Calendar, AlertCircle, Activity, Mail, Phone, IdCard } from "lucide-react";
+import { Wallet, Calendar, AlertCircle, Activity, Mail, Phone } from "lucide-react";
 import { AdminPage } from "@/components/admin/admin-page";
 import { StatCard } from "@/components/admin/stat-card";
 import { StatusPill } from "@/components/admin/status-pill";
@@ -23,6 +23,7 @@ import { PaymentsTable } from "./_payments-table";
 import { RecordPaymentButton } from "./_record-payment-button";
 import { AttendanceTable } from "./_attendance-table";
 import { SendWorkoutPlanButton } from "./_send-workout-plan-button";
+import { GymIdCopy } from "@/components/admin/gym-id-copy";
 
 export default async function MemberDetailPage({
   params,
@@ -137,6 +138,12 @@ export default async function MemberDetailPage({
       <div className="space-y-6">
         {/* Hero card */}
         <div className="rounded-xl border bg-card p-4 sm:p-6 relative">
+          {/* Desktop: gym id copy widget at top-right */}
+          {member.gymId !== null && (
+            <div className="hidden sm:block absolute top-4 right-4">
+              <GymIdCopy gymId={member.gymId} />
+            </div>
+          )}
           {/* Send workout plan: bottom-right of hero on sm+, full-width on mobile */}
           <div className="hidden sm:block absolute bottom-4 right-4">
             <SendWorkoutPlanButton
@@ -146,7 +153,7 @@ export default async function MemberDetailPage({
             />
           </div>
           <div className="flex flex-col sm:flex-row sm:items-center gap-5">
-            <div className="relative shrink-0 self-center sm:self-start">
+            <div className="shrink-0 self-center sm:self-start">
               <Avatar className="size-20 rounded-2xl after:rounded-2xl">
                 {avatarUrl ? (
                   <AvatarImage
@@ -159,24 +166,15 @@ export default async function MemberDetailPage({
                   {initialsOf(member.fullName)}
                 </AvatarFallback>
               </Avatar>
-              <div className="absolute -bottom-2 left-1/2 -translate-x-1/2">
+            </div>
+            <div className="min-w-0 flex-1 space-y-2 text-center sm:text-left">
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3">
+                <h2 className="text-2xl font-semibold leading-tight break-words">
+                  {member.fullName}
+                </h2>
                 <StatusPill variant={member.status}>{member.status}</StatusPill>
               </div>
-            </div>
-            <div className="min-w-0 flex-1 space-y-2 text-center sm:text-left pt-3 sm:pt-0">
-              <h2 className="text-2xl font-semibold leading-tight break-words">
-                {member.fullName}
-              </h2>
               <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-5 gap-y-2 text-sm text-muted-foreground">
-                {member.gymId !== null && (
-                  <span className="inline-flex items-center gap-1.5">
-                    <IdCard className="size-4 shrink-0" />
-                    <span>Gym ID:</span>
-                    <span className="font-mono font-medium text-foreground">
-                      #{member.gymId}
-                    </span>
-                  </span>
-                )}
                 <span className="inline-flex items-center gap-1.5">
                   <Mail className="size-4 shrink-0" />
                   <span className="break-all">{member.email}</span>
@@ -194,8 +192,13 @@ export default async function MemberDetailPage({
               </div>
             </div>
           </div>
-          {/* Mobile: full-width button below the hero info */}
-          <div className="sm:hidden mt-4">
+          {/* Mobile: gym id copy + full-width button below the hero info */}
+          <div className="sm:hidden mt-4 space-y-3">
+            {member.gymId !== null && (
+              <div className="flex justify-center">
+                <GymIdCopy gymId={member.gymId} />
+              </div>
+            )}
             <SendWorkoutPlanButton
               memberId={member.id}
               memberName={member.fullName}

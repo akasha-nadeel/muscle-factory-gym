@@ -48,7 +48,11 @@ export function RecordPaymentButton({
 
   return (
     <>
-      <Button size="sm" onClick={() => setOpen(true)}>
+      <Button
+        size="sm"
+        onClick={() => setOpen(true)}
+        className="dark:bg-white dark:text-black dark:hover:bg-white/90"
+      >
         Record payment
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>

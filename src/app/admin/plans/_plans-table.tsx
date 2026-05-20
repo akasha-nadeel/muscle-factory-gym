@@ -23,6 +23,7 @@ import { PlanForm } from "./_plan-form";
 import { setPlanActive } from "./actions";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/admin/empty-state";
+import { StatusPill } from "@/components/admin/status-pill";
 import { Tag } from "lucide-react";
 
 type Plan = {
@@ -51,7 +52,12 @@ export function PlansTable({ plans }: { plans: Plan[] }) {
   return (
     <>
       <div className="flex justify-end">
-        <Button onClick={() => setCreating(true)}>New plan</Button>
+        <Button
+          onClick={() => setCreating(true)}
+          className="dark:bg-white dark:text-black dark:hover:bg-white/90"
+        >
+          New plan
+        </Button>
         <Dialog open={creating} onOpenChange={setCreating}>
           <DialogContent>
             <DialogHeader>
@@ -96,7 +102,7 @@ export function PlansTable({ plans }: { plans: Plan[] }) {
               <TableCell>{Number(p.priceLkr).toLocaleString()}</TableCell>
               <TableCell>
                 {p.isActive ? (
-                  <Badge>Active</Badge>
+                  <StatusPill variant="active">Active</StatusPill>
                 ) : (
                   <Badge variant="secondary">Disabled</Badge>
                 )}

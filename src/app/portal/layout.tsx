@@ -1,9 +1,5 @@
-import Link from "next/link";
-import Image from "next/image";
 import { requireMember } from "@/lib/auth";
 import { UserButton } from "@clerk/nextjs";
-import { ThemeToggle } from "@/components/admin/theme-toggle";
-import { PortalNav } from "@/components/portal/nav";
 
 // Same inline theme-init script as admin/auth/landing — apply dark by default
 // unless localStorage says otherwise. Runs before React hydrates so there's
@@ -32,26 +28,15 @@ export default async function PortalLayout({
         suppressHydrationWarning
       />
       <div className="min-h-screen flex flex-col bg-background text-foreground">
-        <header className="sticky top-0 z-20 h-14 border-b bg-card flex items-center justify-between px-3 sm:px-4 md:px-6 gap-2 sm:gap-4">
-          <Link
-            href="/portal"
-            className="shrink-0 flex items-center"
-            aria-label="Muscle Factory Gym — Home"
-          >
-            <Image
-              src="/logo.webp"
-              alt="Muscle Factory Gym"
-              width={180}
-              height={42}
-              priority
-              className="h-[26px] sm:h-[34px] w-auto [filter:url(#logo-light-mode)_brightness(2)_saturate(1.5)] dark:[filter:none]"
-            />
-          </Link>
-          <PortalNav />
-          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-            <ThemeToggle />
-            <UserButton />
-          </div>
+        <header className="h-14 flex items-center justify-end px-5 sm:px-6 md:px-8">
+          <UserButton
+            appearance={{
+              elements: {
+                userButtonAvatarBox: "!size-11 sm:!size-8",
+                avatarBox: "!size-11 sm:!size-8",
+              },
+            }}
+          />
         </header>
         <main className="flex-1 overflow-y-auto">
           <div className="max-w-5xl mx-auto w-full p-4 md:p-6">{children}</div>

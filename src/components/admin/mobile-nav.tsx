@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
 import { NavItems } from "./nav-items";
 
-export function MobileNav() {
+export function MobileNav({ pendingCount }: { pendingCount?: number }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
@@ -76,7 +76,7 @@ export function MobileNav() {
                 <X className="size-5" />
               </button>
             </div>
-            <NavItems />
+            <NavItems pendingCount={pendingCount} />
           </aside>
         </div>
       )}
