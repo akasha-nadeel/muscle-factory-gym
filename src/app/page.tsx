@@ -1,11 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { redirect } from "next/navigation";
-import { db } from "@/db";
-import { plans } from "@/db/schema";
-import { eq, asc } from "drizzle-orm";
 import { buttonVariants } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getCurrentUser } from "@/lib/auth";
 
 // Same theme-init script as admin/auth — apply dark by default.
@@ -24,22 +20,6 @@ export default async function Home() {
   const u = await getCurrentUser();
   if (u) {
     redirect(u.role === "admin" ? "/admin" : "/portal");
-  }
-
-  let planList: { id: string; name: string; durationDays: number; priceLkr: string }[] = [];
-  try {
-    planList = await db
-      .select({
-        id: plans.id,
-        name: plans.name,
-        durationDays: plans.durationDays,
-        priceLkr: plans.priceLkr,
-      })
-      .from(plans)
-      .where(eq(plans.isActive, true))
-      .orderBy(asc(plans.durationDays));
-  } catch (err) {
-    console.warn(`[landing] plans query failed: ${err}`);
   }
 
   return (
@@ -102,47 +82,6 @@ export default async function Home() {
             </Link>
           </div>
         </section>
-
-        {/* Plans */}
-        {planList.length > 0 && (
-          <section className="max-w-6xl mx-auto px-4 md:px-6 py-16 border-t">
-            <div className="text-center mb-10">
-              <h2 className="text-2xl md:text-3xl font-semibold">
-                Membership plans
-              </h2>
-              <p className="text-muted-foreground mt-2">
-                Pick the plan that fits your routine.
-              </p>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {planList.map((p) => (
-                <Card key={p.id}>
-                  <CardHeader>
-                    <CardTitle className="text-lg">{p.name}</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="text-3xl font-semibold tabular-nums">
-                      LKR {Number(p.priceLkr).toLocaleString()}
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      {p.durationDays}-day access
-                    </div>
-                    <Link
-                      href="/sign-up"
-                      className={buttonVariants({
-                        variant: "outline",
-                        size: "sm",
-                        className: "w-full mt-3",
-                      })}
-                    >
-                      Join
-                    </Link>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </section>
-        )}
 
         {/* Footer */}
         <footer className="border-t mt-16">
