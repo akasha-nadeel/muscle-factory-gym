@@ -94,8 +94,9 @@ export function SendWorkoutPlanButton({
     <>
       <Button
         size="sm"
+        variant="outline"
         onClick={() => setOpen(true)}
-        className="dark:bg-white dark:text-black dark:hover:bg-white/90"
+        className="bg-foreground/[0.80] hover:bg-foreground/[0.90] text-background hover:text-background dark:bg-foreground/[0.06] dark:hover:bg-foreground/[0.12] dark:text-foreground dark:hover:text-foreground"
       >
         <FileUp className="size-4" />
         Send workout plan

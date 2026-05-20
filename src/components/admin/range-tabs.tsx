@@ -43,7 +43,7 @@ export function RangeTabs({
             className={cn(
               "px-2.5 py-1 rounded-[5px] transition-colors",
               active
-                ? "bg-background text-foreground shadow-sm"
+                ? "bg-foreground text-background shadow-sm"
                 : "text-muted-foreground hover:text-foreground",
             )}
           >

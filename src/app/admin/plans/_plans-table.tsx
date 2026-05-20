@@ -53,8 +53,9 @@ export function PlansTable({ plans }: { plans: Plan[] }) {
     <>
       <div className="flex justify-end">
         <Button
+          variant="outline"
           onClick={() => setCreating(true)}
-          className="dark:bg-white dark:text-black dark:hover:bg-white/90"
+          className="bg-foreground/[0.80] hover:bg-foreground/[0.90] text-background hover:text-background dark:bg-foreground/[0.06] dark:hover:bg-foreground/[0.12] dark:text-foreground dark:hover:text-foreground"
         >
           New plan
         </Button>
