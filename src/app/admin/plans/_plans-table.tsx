@@ -55,7 +55,7 @@ export function PlansTable({ plans }: { plans: Plan[] }) {
         <Button
           variant="outline"
           onClick={() => setCreating(true)}
-          className="bg-foreground/[0.80] hover:bg-foreground/[0.90] text-background hover:text-background dark:bg-foreground/[0.06] dark:hover:bg-foreground/[0.12] dark:text-foreground dark:hover:text-foreground"
+          className="bg-foreground/[0.80] hover:bg-foreground/[0.90] text-background hover:text-background dark:bg-white dark:hover:bg-white/90 dark:text-black dark:hover:text-black"
         >
           New plan
         </Button>

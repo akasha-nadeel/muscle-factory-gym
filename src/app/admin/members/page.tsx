@@ -232,6 +232,7 @@ export default async function MembersPage({
                       render={<Link href={`/admin/members/${m.id}`} />}
                       size="sm"
                       variant="outline"
+                      className="dark:bg-white dark:hover:bg-white/90 dark:text-black dark:hover:text-black dark:border-transparent"
                     >
                       View
                     </Button>

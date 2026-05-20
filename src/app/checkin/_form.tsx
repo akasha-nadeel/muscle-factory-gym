@@ -5,6 +5,7 @@ import { submitGymId, type SubmitGymIdResult } from "./actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
 
 const RESULT_DISPLAY_MS = 5000;
 const RECENT_IDS_KEY = "gym-checkin-recent-ids";
@@ -78,10 +79,22 @@ export function CheckinForm() {
 
   useEffect(() => {
     if (!state) return;
-    if (state.ok && state.member.gymId !== null) {
-      const idStr = String(state.member.gymId);
-      saveRecentId(idStr);
-      setRecentIds(loadRecentIds());
+    if (state.ok) {
+      const days = state.member.daysRemaining;
+      toast.success(`Welcome, ${state.member.fullName}`, {
+        description: `${state.member.planName} — ${days} day${
+          days === 1 ? "" : "s"
+        } remaining`,
+        duration: RESULT_DISPLAY_MS,
+      });
+      if (state.member.gymId !== null) {
+        saveRecentId(String(state.member.gymId));
+        setRecentIds(loadRecentIds());
+      }
+    } else {
+      toast.error(rejectMessage(state.reason), {
+        duration: RESULT_DISPLAY_MS,
+      });
     }
     const t = setTimeout(() => {
       formRef.current?.reset();
@@ -162,26 +175,6 @@ export function CheckinForm() {
           {pending ? "Checking…" : "Submit"}
         </Button>
       </form>
-
-      {state?.ok && (
-        <div className="rounded-lg border border-green-500/40 bg-green-500/10 p-4 text-center space-y-1">
-          <div className="text-green-700 dark:text-green-300 text-lg font-semibold">
-            ✓ Welcome, {state.member.fullName}
-          </div>
-          <div className="text-sm text-muted-foreground">
-            {state.member.planName} — {state.member.daysRemaining} day
-            {state.member.daysRemaining === 1 ? "" : "s"} remaining
-          </div>
-        </div>
-      )}
-
-      {state && !state.ok && (
-        <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-center">
-          <div className="text-destructive font-medium">
-            {rejectMessage(state.reason)}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
