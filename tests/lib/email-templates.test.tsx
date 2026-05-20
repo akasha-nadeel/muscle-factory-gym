@@ -4,6 +4,7 @@ import { Reminder3dEmail } from "@/lib/email/templates/reminder-3d";
 import { Reminder1dEmail } from "@/lib/email/templates/reminder-1d";
 import { ReminderOverdueEmail } from "@/lib/email/templates/reminder-overdue";
 import { WelcomeEmail } from "@/lib/email/templates/welcome";
+import { WorkoutPlanEmail } from "@/lib/email/templates/workout-plan";
 
 describe("email templates render", () => {
   it("Reminder3dEmail produces HTML with member name, plan, and CTA", async () => {
@@ -86,5 +87,20 @@ describe("email templates render", () => {
     );
     expect(html).toContain("No ID Yet");
     expect(html).not.toContain("Your Gym ID");
+  });
+
+  it("WorkoutPlanEmail produces HTML with name, filename, and portal CTA", async () => {
+    const html = await renderEmail(
+      <WorkoutPlanEmail
+        memberName="Saman Perera"
+        fileName="upper-body-routine.pdf"
+        appUrl="https://gym.example"
+      />,
+    );
+    const text = html.replace(/<!--[^>]*-->/g, "");
+    expect(text).toContain("Saman Perera");
+    expect(text).toContain("upper-body-routine.pdf");
+    expect(text).toContain("https://gym.example/portal");
+    expect(text).toContain("Open my portal");
   });
 });

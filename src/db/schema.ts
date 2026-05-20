@@ -177,3 +177,27 @@ export const attendance = pgTable(
     index("attendance_checked_in_at_idx").on(t.checkedInAt),
   ],
 );
+
+// Phase 13: one workout plan per member (latest-only). New uploads upsert
+// over the existing row and delete the previous file from Supabase Storage.
+export const workoutPlans = pgTable(
+  "workout_plans",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    memberId: uuid("member_id")
+      .notNull()
+      .references(() => profiles.id, { onDelete: "cascade" }),
+    fileName: text("file_name").notNull(),
+    storagePath: text("storage_path").notNull(),
+    fileSizeBytes: integer("file_size_bytes").notNull(),
+    uploadedBy: uuid("uploaded_by").references(() => profiles.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("workout_plans_member_unique").on(t.memberId),
+  ],
+);

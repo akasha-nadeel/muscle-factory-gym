@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { clerkClient } from "@clerk/nextjs/server";
 import { db } from "@/db";
-import { profiles, memberships, plans, payments, attendance } from "@/db/schema";
+import { profiles, memberships, plans, payments, attendance, workoutPlans } from "@/db/schema";
 import { eq, desc, count } from "drizzle-orm";
 import { requireAdminProfile } from "@/lib/auth";
 import { getCurrentMembership } from "@/lib/memberships/current";
@@ -22,6 +22,7 @@ import { initialsOf } from "@/lib/initials";
 import { PaymentsTable } from "./_payments-table";
 import { RecordPaymentButton } from "./_record-payment-button";
 import { AttendanceTable } from "./_attendance-table";
+import { SendWorkoutPlanButton } from "./_send-workout-plan-button";
 
 export default async function MemberDetailPage({
   params,
@@ -101,6 +102,16 @@ export default async function MemberDetailPage({
       })
     : null;
 
+  // Current workout plan (Phase 13) — at most one per member.
+  const [currentWorkoutPlan] = await db
+    .select({
+      fileName: workoutPlans.fileName,
+      createdAt: workoutPlans.createdAt,
+    })
+    .from(workoutPlans)
+    .where(eq(workoutPlans.memberId, id))
+    .limit(1);
+
   // Lifetime totals for stat cards
   const totalPaid = paymentRows
     .filter((p) => p.status === "succeeded")
@@ -125,7 +136,15 @@ export default async function MemberDetailPage({
     >
       <div className="space-y-6">
         {/* Hero card */}
-        <div className="rounded-xl border bg-card p-4 sm:p-6">
+        <div className="rounded-xl border bg-card p-4 sm:p-6 relative">
+          {/* Send workout plan: bottom-right of hero on sm+, full-width on mobile */}
+          <div className="hidden sm:block absolute bottom-4 right-4">
+            <SendWorkoutPlanButton
+              memberId={member.id}
+              memberName={member.fullName}
+              currentPlan={currentWorkoutPlan ?? null}
+            />
+          </div>
           <div className="flex flex-col sm:flex-row sm:items-center gap-5">
             <div className="relative shrink-0 self-center sm:self-start">
               <Avatar className="size-20 rounded-2xl after:rounded-2xl">
@@ -174,6 +193,14 @@ export default async function MemberDetailPage({
                 </span>
               </div>
             </div>
+          </div>
+          {/* Mobile: full-width button below the hero info */}
+          <div className="sm:hidden mt-4">
+            <SendWorkoutPlanButton
+              memberId={member.id}
+              memberName={member.fullName}
+              currentPlan={currentWorkoutPlan ?? null}
+            />
           </div>
         </div>
 

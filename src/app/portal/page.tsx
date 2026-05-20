@@ -1,18 +1,21 @@
 import { redirect } from "next/navigation";
 import { requireMemberProfile } from "@/lib/auth";
 import { db } from "@/db";
-import { memberships, plans, payments, attendance } from "@/db/schema";
+import { memberships, plans, payments, attendance, workoutPlans } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { format } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
+import { FileText, Eye, Download } from "lucide-react";
 import { getCurrentMembership } from "@/lib/memberships/current";
 import { daysRemaining } from "@/lib/days-remaining";
 import { todayInSL } from "@/lib/tz";
 import { computeOutstanding } from "@/lib/payments/outstanding";
+import { signedWorkoutPlanUrl } from "@/lib/storage/supabase-storage";
 
 export default async function PortalHome() {
   const me = await requireMemberProfile();
@@ -79,6 +82,44 @@ export default async function PortalHome() {
     .where(eq(attendance.memberId, me.id))
     .orderBy(desc(attendance.checkedInAt))
     .limit(30);
+
+  // Phase 13: current workout plan (latest-only). Signed URLs are
+  // generated server-side and expire in 1 hour. Wrapped in try/catch so a
+  // storage misconfiguration (e.g., SUPABASE_URL not set in dev) doesn't
+  // 500 the whole portal — the card just won't render.
+  const [planRow] = await db
+    .select({
+      fileName: workoutPlans.fileName,
+      storagePath: workoutPlans.storagePath,
+      createdAt: workoutPlans.createdAt,
+    })
+    .from(workoutPlans)
+    .where(eq(workoutPlans.memberId, me.id))
+    .limit(1);
+  let workoutPlanView: {
+    fileName: string;
+    createdAt: Date;
+    viewUrl: string;
+    downloadUrl: string;
+  } | null = null;
+  if (planRow) {
+    try {
+      const [viewUrl, downloadUrl] = await Promise.all([
+        signedWorkoutPlanUrl(planRow.storagePath),
+        signedWorkoutPlanUrl(planRow.storagePath, {
+          downloadAs: planRow.fileName,
+        }),
+      ]);
+      workoutPlanView = {
+        fileName: planRow.fileName,
+        createdAt: planRow.createdAt,
+        viewUrl,
+        downloadUrl,
+      };
+    } catch (err) {
+      console.warn(`[portal] failed to sign workout plan URL: ${String(err)}`);
+    }
+  }
 
   const outstanding =
     current
@@ -156,6 +197,50 @@ export default async function PortalHome() {
             Please visit the front desk to renew.
           </CardContent>
         </Card>
+      )}
+
+      {workoutPlanView && (
+        <div>
+          <h3 className="text-lg font-semibold mb-3">Workout plan</h3>
+          <Card>
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="size-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                <FileText className="size-5" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="font-medium truncate">
+                  {workoutPlanView.fileName}
+                </div>
+                <div className="text-xs text-muted-foreground mt-0.5">
+                  Uploaded {format(workoutPlanView.createdAt, "PP")}
+                </div>
+              </div>
+              <div className="flex gap-2 shrink-0">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  render={
+                    <a
+                      href={workoutPlanView.viewUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    />
+                  }
+                >
+                  <Eye className="size-4" />
+                  <span className="hidden sm:inline">View</span>
+                </Button>
+                <Button
+                  size="sm"
+                  render={<a href={workoutPlanView.downloadUrl} />}
+                >
+                  <Download className="size-4" />
+                  <span className="hidden sm:inline">Download</span>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       )}
 
       <div>
