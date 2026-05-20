@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { validateWorkoutPlanFile } from "@/app/admin/workout-plans/actions";
+import { validateWorkoutPlanFile } from "@/lib/workout-plans/validate";
 
 const MB = 1024 * 1024;
 

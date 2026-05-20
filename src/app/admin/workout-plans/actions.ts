@@ -10,32 +10,11 @@ import {
   deleteWorkoutPlan,
 } from "@/lib/storage/supabase-storage";
 import { sendWorkoutPlanEmail } from "@/lib/email/send-workout-plan";
-
-const MAX_BYTES = 5 * 1024 * 1024; // 5 MB (matches Supabase bucket limit)
+import { validateWorkoutPlanFile } from "@/lib/workout-plans/validate";
 
 export type WorkoutPlanResult =
   | { ok: true }
   | { ok: false; error: string };
-
-/**
- * Pure validation — separated from the action so it's unit-testable
- * without touching FormData, Clerk, or the DB.
- */
-export function validateWorkoutPlanFile(input: {
-  type: string;
-  size: number;
-}): { ok: true } | { ok: false; error: string } {
-  if (input.type !== "application/pdf") {
-    return { ok: false, error: "PDF files only" };
-  }
-  if (input.size > MAX_BYTES) {
-    return { ok: false, error: "File too large (max 5 MB)" };
-  }
-  if (input.size === 0) {
-    return { ok: false, error: "File is empty" };
-  }
-  return { ok: true };
-}
 
 /**
  * Admin uploads a workout plan PDF for a specific member.
