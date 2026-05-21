@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { format, parseISO } from "date-fns";
+import { TriangleAlert } from "lucide-react";
 
 const RESULT_DISPLAY_MS = 5000;
 const RECENT_IDS_KEY = "gym-checkin-recent-ids";
@@ -72,6 +74,11 @@ export function CheckinForm() {
   const [recentIds, setRecentIds] = useState<string[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [focused, setFocused] = useState(false);
+  const [paymentWarning, setPaymentWarning] = useState<{
+    fullName: string;
+    outstandingLkr: string;
+    expiresOn: string;
+  } | null>(null);
 
   useEffect(() => {
     setRecentIds(loadRecentIds());
@@ -80,13 +87,30 @@ export function CheckinForm() {
   useEffect(() => {
     if (!state) return;
     if (state.ok) {
-      const days = state.member.daysRemaining;
-      toast.success(`Welcome, ${state.member.fullName}`, {
-        description: `${state.member.planName} — ${days} day${
-          days === 1 ? "" : "s"
-        } remaining`,
-        duration: RESULT_DISPLAY_MS,
-      });
+      const outstanding = Number(state.member.outstandingLkr);
+      // Only warn when both: there's an outstanding balance AND the
+      // membership is on or past its end_date. Members who still have
+      // days remaining aren't nagged — they have time to pay.
+      const isOverdue =
+        outstanding > 0 && state.member.daysRemaining <= 0;
+
+      if (isOverdue) {
+        // Suppress the success toast — the full-page warning is louder
+        // and serves the same "you're checked in" purpose.
+        setPaymentWarning({
+          fullName: state.member.fullName,
+          outstandingLkr: state.member.outstandingLkr,
+          expiresOn: state.member.expiresOn,
+        });
+      } else {
+        const days = state.member.daysRemaining;
+        toast.success(`Welcome, ${state.member.fullName}`, {
+          description: `${state.member.planName} — ${days} day${
+            days === 1 ? "" : "s"
+          } remaining`,
+          duration: RESULT_DISPLAY_MS,
+        });
+      }
       if (state.member.gymId !== null) {
         saveRecentId(String(state.member.gymId));
         setRecentIds(loadRecentIds());
@@ -96,6 +120,15 @@ export function CheckinForm() {
         duration: RESULT_DISPLAY_MS,
       });
     }
+    const isOverdueWarning =
+      state.ok &&
+      Number(state.member.outstandingLkr) > 0 &&
+      state.member.daysRemaining <= 0;
+
+    // The payment warning is dismissed manually by the member tapping
+    // Close. The toast paths auto-dismiss as before.
+    if (isOverdueWarning) return;
+
     const t = setTimeout(() => {
       formRef.current?.reset();
       setInputValue("");
@@ -103,6 +136,13 @@ export function CheckinForm() {
     }, RESULT_DISPLAY_MS);
     return () => clearTimeout(t);
   }, [state]);
+
+  function closeWarning() {
+    setPaymentWarning(null);
+    formRef.current?.reset();
+    setInputValue("");
+    inputRef.current?.focus();
+  }
 
   const suggestions = recentIds.filter(
     (id) => inputValue.length === 0 || id.startsWith(inputValue),
@@ -117,6 +157,38 @@ export function CheckinForm() {
 
   return (
     <div className="space-y-4">
+      {paymentWarning && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-white text-gray-900 p-6 text-center">
+          <TriangleAlert
+            className="size-20 sm:size-28 mb-6 text-destructive"
+            strokeWidth={1.5}
+          />
+          <h1 className="text-4xl sm:text-6xl font-bold tracking-tight mb-4 text-destructive">
+            PAYMENT DUE
+          </h1>
+          <p className="text-xl sm:text-3xl font-semibold text-gray-900 mb-6">
+            Hi, {paymentWarning.fullName}
+          </p>
+          <p className="text-lg sm:text-2xl text-gray-700 mb-3">
+            Your Membership Expires on this Date
+          </p>
+          <div className="text-3xl sm:text-5xl font-semibold mb-8 text-gray-900">
+            {format(parseISO(paymentWarning.expiresOn), "EEEE, MMM d, yyyy")}
+          </div>
+          <p className="text-base sm:text-lg text-gray-600 max-w-xl mb-10">
+            You&apos;re checked in today. Please visit the front desk to
+            renew your membership.
+          </p>
+          <Button
+            type="button"
+            onClick={closeWarning}
+            size="lg"
+            className="h-12 px-8 text-base"
+          >
+            Close
+          </Button>
+        </div>
+      )}
       <form action={dispatch} ref={formRef} className="space-y-3">
         <div className="space-y-1.5">
           <Label htmlFor="gymId" className="text-base">

@@ -1,11 +1,15 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { eq } from "drizzle-orm";
+import { db } from "@/db";
+import { memberships, payments, plans } from "@/db/schema";
 import { todayInSL } from "@/lib/tz";
 import {
   _recordAttendanceByGymIdUnsafe,
 } from "@/lib/checkin/record";
 import { signKioskToken } from "@/lib/qr/token";
+import { computeOutstanding } from "@/lib/payments/outstanding";
 
 export type SubmitGymIdResult =
   | {
@@ -18,6 +22,7 @@ export type SubmitGymIdResult =
         planName: string;
         expiresOn: string;
         daysRemaining: number;
+        outstandingLkr: string;
       };
     }
   | {
@@ -52,6 +57,36 @@ export async function _submitGymIdUnsafe(input: {
       source: "kiosk_id",
     });
     if (!r.ok) return { ok: false, reason: r.reason };
+
+    // Compute outstanding for the current membership so the kiosk can
+    // warn the member at check-in time. One extra round-trip — cheap.
+    const [mem] = await db
+      .select({
+        id: memberships.id,
+        planPriceLkr: plans.priceLkr,
+      })
+      .from(memberships)
+      .innerJoin(plans, eq(memberships.planId, plans.id))
+      .where(eq(memberships.id, r.member.membershipId))
+      .limit(1);
+    const payRows = await db
+      .select()
+      .from(payments)
+      .where(eq(payments.memberId, r.member.memberId));
+    const outstandingLkr = mem
+      ? computeOutstanding({
+          planPriceLkr: mem.planPriceLkr,
+          payments: payRows.map((p) => ({
+            id: p.id,
+            amountLkr: p.amountLkr,
+            kind: p.kind,
+            status: p.status,
+            membershipId: p.membershipId,
+          })),
+          membershipId: mem.id,
+        })
+      : "0";
+
     return {
       ok: true,
       member: {
@@ -62,6 +97,7 @@ export async function _submitGymIdUnsafe(input: {
         planName: r.member.planName,
         expiresOn: r.member.expiresOn,
         daysRemaining: r.member.daysRemaining,
+        outstandingLkr,
       },
     };
   } catch (e) {

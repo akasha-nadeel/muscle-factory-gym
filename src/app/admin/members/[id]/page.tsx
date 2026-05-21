@@ -23,6 +23,7 @@ import { PaymentsTable } from "./_payments-table";
 import { RecordPaymentButton } from "./_record-payment-button";
 import { AttendanceTable } from "./_attendance-table";
 import { SendWorkoutPlanButton } from "./_send-workout-plan-button";
+import { DeleteMemberButton } from "./_delete-member-button";
 import { GymIdCopy } from "@/components/admin/gym-id-copy";
 
 export default async function MemberDetailPage({
@@ -305,6 +306,26 @@ export default async function MemberDetailPage({
             </Table>
           </div>
           )}
+        </div>
+
+        {/* Danger zone: hard-delete the member */}
+        <div className="pt-6 mt-6 border-t">
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+            Danger zone
+          </h3>
+          <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="text-sm">
+              <div className="font-medium">Remove this member permanently</div>
+              <div className="text-muted-foreground">
+                Wipes their Clerk account, profile, history, and workout plan.
+                Cannot be undone.
+              </div>
+            </div>
+            <DeleteMemberButton
+              memberId={member.id}
+              memberName={member.fullName}
+            />
+          </div>
         </div>
       </div>
     </AdminPage>
