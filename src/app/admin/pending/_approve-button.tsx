@@ -142,6 +142,7 @@ export function ApproveButton({
                   <div className="space-y-1.5">
                     <Label htmlFor="paymentAmount">Amount (LKR)</Label>
                     <Input
+                      key={planId}
                       id="paymentAmount"
                       name="paymentAmount"
                       type="number"

@@ -203,6 +203,11 @@ export default async function MemberDetailPage({
           membershipId: p.membershipId,
         })),
         membershipId: current.id,
+        cycleContext: {
+          startDate: current.startDate,
+          today,
+          cyclePeriod: inferCyclePeriod(current.planName),
+        },
       })
     : null;
 

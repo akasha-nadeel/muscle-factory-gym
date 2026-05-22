@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   inferCyclePeriod,
   computeNextPaymentDue,
+  computeLastMissedDueDate,
 } from "@/lib/payments/next-due";
 
 describe("inferCyclePeriod", () => {
@@ -108,5 +109,57 @@ describe("computeNextPaymentDue", () => {
         today: "2026-10-06",
       }),
     ).toBe("2026-11-05");
+  });
+});
+
+describe("computeLastMissedDueDate", () => {
+  it("returns null when still in first cycle", () => {
+    expect(
+      computeLastMissedDueDate({
+        membershipStart: "2026-05-23",
+        cyclePeriod: "monthly",
+        today: "2026-06-22",
+      }),
+    ).toBeNull();
+  });
+
+  it("returns today when today IS the next-due day", () => {
+    expect(
+      computeLastMissedDueDate({
+        membershipStart: "2026-04-23",
+        cyclePeriod: "monthly",
+        today: "2026-05-23",
+      }),
+    ).toBe("2026-05-23");
+  });
+
+  it("returns the missed due even when several days late", () => {
+    expect(
+      computeLastMissedDueDate({
+        membershipStart: "2026-04-23",
+        cyclePeriod: "monthly",
+        today: "2026-06-10",
+      }),
+    ).toBe("2026-05-23");
+  });
+
+  it("advances to the most recent missed cycle when months go by", () => {
+    expect(
+      computeLastMissedDueDate({
+        membershipStart: "2026-04-23",
+        cyclePeriod: "monthly",
+        today: "2026-08-01",
+      }),
+    ).toBe("2026-07-23");
+  });
+
+  it("yearly: returns the anniversary that just passed", () => {
+    expect(
+      computeLastMissedDueDate({
+        membershipStart: "2026-05-23",
+        cyclePeriod: "yearly",
+        today: "2027-06-01",
+      }),
+    ).toBe("2027-05-23");
   });
 });

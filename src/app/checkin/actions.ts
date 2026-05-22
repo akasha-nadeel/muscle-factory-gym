@@ -13,6 +13,7 @@ import { computeOutstanding } from "@/lib/payments/outstanding";
 import {
   inferCyclePeriod,
   computeNextPaymentDue,
+  computeLastMissedDueDate,
 } from "@/lib/payments/next-due";
 
 export type SubmitGymIdResult =
@@ -29,6 +30,8 @@ export type SubmitGymIdResult =
         outstandingLkr: string;
         /** Calendar-aware next payment due (e.g. Oct 5 + 1 month = Nov 5). */
         nextPaymentDue: string | null;
+        /** Most recently missed due date (null if not yet past any). */
+        lastMissedDue: string | null;
       };
     }
   | {
@@ -92,12 +95,25 @@ export async function _submitGymIdUnsafe(input: {
             membershipId: p.membershipId,
           })),
           membershipId: mem.id,
+          cycleContext: {
+            startDate: mem.startDate,
+            today: input.todaySL,
+            cyclePeriod: inferCyclePeriod(mem.planName),
+          },
         })
       : "0";
-    const nextPaymentDue = mem
+    const cyclePeriod = mem ? inferCyclePeriod(mem.planName) : null;
+    const nextPaymentDue = mem && cyclePeriod
       ? computeNextPaymentDue({
           membershipStart: mem.startDate,
-          cyclePeriod: inferCyclePeriod(mem.planName),
+          cyclePeriod,
+          today: input.todaySL,
+        })
+      : null;
+    const lastMissedDue = mem && cyclePeriod
+      ? computeLastMissedDueDate({
+          membershipStart: mem.startDate,
+          cyclePeriod,
           today: input.todaySL,
         })
       : null;
@@ -114,6 +130,7 @@ export async function _submitGymIdUnsafe(input: {
         daysRemaining: r.member.daysRemaining,
         outstandingLkr,
         nextPaymentDue,
+        lastMissedDue,
       },
     };
   } catch (e) {

@@ -113,15 +113,21 @@ export function PlansTable({ plans }: { plans: Plan[] }) {
                   variant="outline"
                   size="sm"
                   onClick={() => setEditing(p)}
+                  className="bg-foreground hover:bg-foreground/90 text-background hover:text-background border-transparent dark:bg-white dark:hover:bg-white/90 dark:text-black dark:hover:text-black"
                 >
                   Edit
                 </Button>
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
                   disabled={isPending}
                   onClick={() =>
                     p.isActive ? setConfirmDisable(p) : setActive(p, true)
+                  }
+                  className={
+                    p.isActive
+                      ? "text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive"
+                      : "text-emerald-600 border-emerald-600/30 hover:bg-emerald-600/10 hover:text-emerald-600 dark:text-emerald-500 dark:border-emerald-500/30 dark:hover:bg-emerald-500/10 dark:hover:text-emerald-500"
                   }
                 >
                   {p.isActive ? "Disable" : "Re-enable"}

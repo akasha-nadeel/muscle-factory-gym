@@ -79,6 +79,7 @@ export function CheckinForm() {
     outstandingLkr: string;
     expiresOn: string;
     nextPaymentDue: string | null;
+    lastMissedDue: string | null;
   } | null>(null);
 
   useEffect(() => {
@@ -89,11 +90,11 @@ export function CheckinForm() {
     if (!state) return;
     if (state.ok) {
       const outstanding = Number(state.member.outstandingLkr);
-      // Only warn when both: there's an outstanding balance AND the
-      // membership is on or past its end_date. Members who still have
-      // days remaining aren't nagged — they have time to pay.
-      const isOverdue =
-        outstanding > 0 && state.member.daysRemaining <= 0;
+      // Cycle-aware outstanding: it's 0 for a member who's paid up for
+      // the current cycle, and goes back up to one cycle's price on each
+      // due day they haven't paid. So any outstanding > 0 means they're
+      // behind for at least one cycle — fire the warning.
+      const isOverdue = outstanding > 0;
 
       if (isOverdue) {
         // Suppress the success toast — the full-page warning is louder
@@ -103,6 +104,7 @@ export function CheckinForm() {
           outstandingLkr: state.member.outstandingLkr,
           expiresOn: state.member.expiresOn,
           nextPaymentDue: state.member.nextPaymentDue,
+          lastMissedDue: state.member.lastMissedDue,
         });
       } else {
         const days = state.member.daysRemaining;
@@ -123,9 +125,7 @@ export function CheckinForm() {
       });
     }
     const isOverdueWarning =
-      state.ok &&
-      Number(state.member.outstandingLkr) > 0 &&
-      state.member.daysRemaining <= 0;
+      state.ok && Number(state.member.outstandingLkr) > 0;
 
     // The payment warning is dismissed manually by the member tapping
     // Close. The toast paths auto-dismiss as before.
@@ -160,7 +160,7 @@ export function CheckinForm() {
   return (
     <div className="space-y-4">
       {paymentWarning && (
-        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-white text-gray-900 p-6 text-center">
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-zinc-950 text-zinc-50 p-6 text-center">
           <TriangleAlert
             className="size-20 sm:size-28 mb-6 text-destructive"
             strokeWidth={1.5}
@@ -168,21 +168,31 @@ export function CheckinForm() {
           <h1 className="text-4xl sm:text-6xl font-bold tracking-tight mb-4 text-destructive">
             PAYMENT DUE
           </h1>
-          <p className="text-xl sm:text-3xl font-semibold text-gray-900 mb-6">
+          <p className="text-xl sm:text-3xl font-semibold text-zinc-50 mb-6">
             Hi, {paymentWarning.fullName}
           </p>
-          <p className="text-lg sm:text-2xl text-gray-700 mb-3">
-            Your next payment is due on
-          </p>
-          <div className="text-3xl sm:text-5xl font-semibold mb-8 text-gray-900">
-            {format(
-              parseISO(
-                paymentWarning.nextPaymentDue ?? paymentWarning.expiresOn,
-              ),
-              "EEEE, MMM d, yyyy",
-            )}
-          </div>
-          <p className="text-base sm:text-lg text-gray-600 max-w-xl mb-10">
+          {(() => {
+            // Prefer the actual missed due date; fall back to next-due or end-date.
+            const displayDate =
+              paymentWarning.lastMissedDue ??
+              paymentWarning.nextPaymentDue ??
+              paymentWarning.expiresOn;
+            const todayStr = format(new Date(), "yyyy-MM-dd");
+            const isToday = displayDate === todayStr;
+            return (
+              <>
+                <p className="text-lg sm:text-2xl text-zinc-300 mb-3">
+                  {isToday
+                    ? "Your payment is due today"
+                    : "Your payment was due on"}
+                </p>
+                <div className="text-3xl sm:text-5xl font-semibold mb-8 text-zinc-50">
+                  {format(parseISO(displayDate), "EEEE, MMM d, yyyy")}
+                </div>
+              </>
+            );
+          })()}
+          <p className="text-base sm:text-lg text-zinc-400 max-w-xl mb-10">
             You&apos;re checked in today. Please visit the front desk to
             renew your membership.
           </p>

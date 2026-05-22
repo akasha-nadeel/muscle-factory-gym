@@ -25,6 +25,7 @@ import {
 } from "@/components/admin/recent-checkins-panel";
 import { todayInSL } from "@/lib/tz";
 import { RangeTabs, type RangeKey } from "@/components/admin/range-tabs";
+import { getOutstandingBreakdown } from "@/lib/payments/outstanding-breakdown";
 
 function startOfMonthSL(todaySL: string): string {
   return `${todaySL.slice(0, 7)}-01`;
@@ -71,49 +72,15 @@ export default async function AdminHome({
   const monthEnd = startOfNextMonthSL(today);
   const recentRangeStart = rangeStartSL(today, range);
 
-  // Total outstanding across active members in ONE SQL pass:
-  //   - pick each active member's latest active+unexpired membership (CTE 1)
-  //   - sum membership-kind payments per membership (CTE 2)
-  //   - return sum of GREATEST(plan_price - paid, 0) across all rows
-  // Mirrors computeOutstanding()'s semantics: refunds (negative amounts) are
-  // included via SUM, and the per-member result is clamped at 0.
-  const outstandingQuery = db.execute(sql`
-    WITH current_memberships AS (
-      SELECT DISTINCT ON (m.member_id)
-        m.id AS membership_id,
-        pl.price_lkr
-      FROM memberships m
-      INNER JOIN plans pl ON pl.id = m.plan_id
-      INNER JOIN profiles pr ON pr.id = m.member_id
-      WHERE m.status = 'active'
-        AND m.end_date >= ${today}::date
-        AND pr.role = 'member'
-        AND pr.status = 'active'
-      ORDER BY m.member_id, m.end_date DESC
-    ),
-    paid_amounts AS (
-      SELECT
-        p.membership_id,
-        SUM(p.amount_lkr) AS total_paid
-      FROM payments p
-      WHERE p.kind = 'membership'
-        AND p.status IN ('succeeded', 'refunded')
-        AND p.membership_id IS NOT NULL
-      GROUP BY p.membership_id
-    )
-    SELECT COALESCE(SUM(GREATEST(
-      cm.price_lkr::numeric - COALESCE(pa.total_paid, 0),
-      0
-    )), 0)::text AS total
-    FROM current_memberships cm
-    LEFT JOIN paid_amounts pa ON pa.membership_id = cm.membership_id
-  `);
+  // Cycle-aware outstanding total — uses the same helper as /admin/outstanding
+  // so dashboard + breakdown + member-detail all agree on the number.
+  const outstandingQuery = getOutstandingBreakdown(today);
 
   const [
     revenueRow,
     activeRow,
     pendingRow,
-    outstandingRawResult,
+    outstandingRowsResolved,
     paymentsRaw,
     checkinsRaw,
   ] = await Promise.all([
@@ -178,12 +145,10 @@ export default async function AdminHome({
   const activeCount = Number(activeRow[0]?.count ?? 0);
   const pendingCount = Number(pendingRow[0]?.count ?? 0);
 
-  // postgres-js returns either an array or { rows: [] } depending on driver
-  // version. Handle both (same pattern as Phase 5/6).
-  const outstandingRows =
-    (outstandingRawResult as unknown as { rows?: Array<{ total: string }> })
-      .rows ?? (outstandingRawResult as unknown as Array<{ total: string }>);
-  const outstandingTotal = Number(outstandingRows?.[0]?.total ?? 0);
+  const outstandingTotal = outstandingRowsResolved.reduce(
+    (sum, r) => sum + Number(r.outstandingLkr),
+    0,
+  );
 
   return (
     <AdminPage breadcrumbs={[{ label: "Dashboard" }]}>

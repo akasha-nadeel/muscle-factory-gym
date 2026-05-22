@@ -132,7 +132,8 @@ export default async function OutstandingPage() {
                               <Link href={`/admin/members/${r.memberId}`} />
                             }
                             size="sm"
-                            variant="ghost"
+                            variant="outline"
+                            className="bg-foreground hover:bg-foreground/90 text-background hover:text-background border-transparent dark:bg-white dark:hover:bg-white/90 dark:text-black dark:hover:text-black"
                           >
                             View
                           </Button>
