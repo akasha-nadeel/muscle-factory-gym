@@ -11,7 +11,12 @@ import {
 import { format } from "date-fns";
 import { todayInSL } from "@/lib/tz";
 import { computeOutstanding } from "@/lib/payments/outstanding";
+import {
+  inferCyclePeriod,
+  computeNextPaymentDue,
+} from "@/lib/payments/next-due";
 import { daysRemaining } from "@/lib/days-remaining";
+import { format as formatDate, parseISO } from "date-fns";
 import { Wallet, Calendar, AlertCircle, Activity, Mail, Phone } from "lucide-react";
 import { AdminPage } from "@/components/admin/admin-page";
 import { StatCard } from "@/components/admin/stat-card";
@@ -220,8 +225,20 @@ export default async function MemberDetailPage({
     .from(attendance)
     .where(eq(attendance.memberId, id));
 
+  // Next payment due (calendar-aware) — only meaningful for recurring plans
+  const nextPaymentDue = current
+    ? computeNextPaymentDue({
+        membershipStart: current.startDate,
+        cyclePeriod: inferCyclePeriod(current.planName),
+        today,
+      })
+    : null;
+
   const activeMembershipCaption = (() => {
     if (!current) return "None";
+    if (nextPaymentDue) {
+      return `Next due ${formatDate(parseISO(nextPaymentDue), "MMM d, yyyy")}`;
+    }
     const days = Math.max(0, daysRemaining({ today, endDate: current.endDate }));
     return `${days} day${days === 1 ? "" : "s"} remaining`;
   })();

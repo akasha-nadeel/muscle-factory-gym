@@ -24,6 +24,11 @@ import { getCurrentMembership } from "@/lib/memberships/current";
 import { daysRemaining } from "@/lib/days-remaining";
 import { todayInSL } from "@/lib/tz";
 import { computeOutstanding } from "@/lib/payments/outstanding";
+import {
+  inferCyclePeriod,
+  computeNextPaymentDue,
+} from "@/lib/payments/next-due";
+import { parseISO } from "date-fns";
 import { signedWorkoutPlanUrl } from "@/lib/storage/supabase-storage";
 
 export default async function PortalHome() {
@@ -189,8 +194,20 @@ export default async function PortalHome() {
     .from(attendance)
     .where(eq(attendance.memberId, me.id));
 
+  // Calendar-aware "next payment due" — Oct 5 monthly → Nov 5, etc.
+  const nextPaymentDue = current
+    ? computeNextPaymentDue({
+        membershipStart: current.startDate,
+        cyclePeriod: inferCyclePeriod(current.planName),
+        today,
+      })
+    : null;
+
   const activeMembershipCaption = (() => {
     if (!current) return "None";
+    if (nextPaymentDue) {
+      return `Next due ${format(parseISO(nextPaymentDue), "MMM d, yyyy")}`;
+    }
     const days = Math.max(0, daysRemaining({ today, endDate: current.endDate }));
     return `${days} day${days === 1 ? "" : "s"} remaining`;
   })();

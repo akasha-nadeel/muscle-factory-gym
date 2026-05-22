@@ -78,6 +78,7 @@ export function CheckinForm() {
     fullName: string;
     outstandingLkr: string;
     expiresOn: string;
+    nextPaymentDue: string | null;
   } | null>(null);
 
   useEffect(() => {
@@ -101,6 +102,7 @@ export function CheckinForm() {
           fullName: state.member.fullName,
           outstandingLkr: state.member.outstandingLkr,
           expiresOn: state.member.expiresOn,
+          nextPaymentDue: state.member.nextPaymentDue,
         });
       } else {
         const days = state.member.daysRemaining;
@@ -170,10 +172,15 @@ export function CheckinForm() {
             Hi, {paymentWarning.fullName}
           </p>
           <p className="text-lg sm:text-2xl text-gray-700 mb-3">
-            Your Membership Expires on this Date
+            Your next payment is due on
           </p>
           <div className="text-3xl sm:text-5xl font-semibold mb-8 text-gray-900">
-            {format(parseISO(paymentWarning.expiresOn), "EEEE, MMM d, yyyy")}
+            {format(
+              parseISO(
+                paymentWarning.nextPaymentDue ?? paymentWarning.expiresOn,
+              ),
+              "EEEE, MMM d, yyyy",
+            )}
           </div>
           <p className="text-base sm:text-lg text-gray-600 max-w-xl mb-10">
             You&apos;re checked in today. Please visit the front desk to

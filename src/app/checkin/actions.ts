@@ -10,6 +10,10 @@ import {
 } from "@/lib/checkin/record";
 import { signKioskToken } from "@/lib/qr/token";
 import { computeOutstanding } from "@/lib/payments/outstanding";
+import {
+  inferCyclePeriod,
+  computeNextPaymentDue,
+} from "@/lib/payments/next-due";
 
 export type SubmitGymIdResult =
   | {
@@ -23,6 +27,8 @@ export type SubmitGymIdResult =
         expiresOn: string;
         daysRemaining: number;
         outstandingLkr: string;
+        /** Calendar-aware next payment due (e.g. Oct 5 + 1 month = Nov 5). */
+        nextPaymentDue: string | null;
       };
     }
   | {
@@ -63,7 +69,9 @@ export async function _submitGymIdUnsafe(input: {
     const [mem] = await db
       .select({
         id: memberships.id,
+        startDate: memberships.startDate,
         planPriceLkr: plans.priceLkr,
+        planName: plans.name,
       })
       .from(memberships)
       .innerJoin(plans, eq(memberships.planId, plans.id))
@@ -86,6 +94,13 @@ export async function _submitGymIdUnsafe(input: {
           membershipId: mem.id,
         })
       : "0";
+    const nextPaymentDue = mem
+      ? computeNextPaymentDue({
+          membershipStart: mem.startDate,
+          cyclePeriod: inferCyclePeriod(mem.planName),
+          today: input.todaySL,
+        })
+      : null;
 
     return {
       ok: true,
@@ -98,6 +113,7 @@ export async function _submitGymIdUnsafe(input: {
         expiresOn: r.member.expiresOn,
         daysRemaining: r.member.daysRemaining,
         outstandingLkr,
+        nextPaymentDue,
       },
     };
   } catch (e) {
