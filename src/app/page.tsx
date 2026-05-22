@@ -3,6 +3,7 @@ import Image from "next/image";
 import { redirect } from "next/navigation";
 import { buttonVariants } from "@/components/ui/button";
 import { getCurrentUser } from "@/lib/auth";
+import { ForceDarkOnMount } from "./_force-dark";
 
 // Landing page is locked to dark theme — ignore any saved 'light' preference
 // from /portal so the marketing surface stays visually consistent.
@@ -22,6 +23,7 @@ export default async function Home() {
         dangerouslySetInnerHTML={{ __html: themeInitScript }}
         suppressHydrationWarning
       />
+      <ForceDarkOnMount />
       <main className="min-h-screen bg-background text-foreground">
         {/* Top bar */}
         <header>

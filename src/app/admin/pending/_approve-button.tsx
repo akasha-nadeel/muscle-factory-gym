@@ -46,7 +46,11 @@ export function ApproveButton({
 
   return (
     <>
-      <Button size="sm" onClick={() => setOpen(true)}>
+      <Button
+        size="sm"
+        onClick={() => setOpen(true)}
+        className="bg-emerald-500 hover:bg-emerald-600 text-white"
+      >
         Approve
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
@@ -164,7 +168,11 @@ export function ApproveButton({
             </div>
 
             <div className="flex justify-end gap-2">
-              <Button type="submit" disabled={pending || !planId}>
+              <Button
+                type="submit"
+                disabled={pending || !planId}
+                className="bg-emerald-500 hover:bg-emerald-600 text-white"
+              >
                 {pending ? "Approving…" : "Approve"}
               </Button>
             </div>

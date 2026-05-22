@@ -25,6 +25,9 @@ import { AttendanceTable } from "./_attendance-table";
 import { SendWorkoutPlanButton } from "./_send-workout-plan-button";
 import { DeleteMemberButton } from "./_delete-member-button";
 import { GymIdCopy } from "@/components/admin/gym-id-copy";
+import { ApproveButton } from "@/app/admin/pending/_approve-button";
+import { RejectButton } from "@/app/admin/pending/_reject-button";
+import { Clock } from "lucide-react";
 
 export default async function MemberDetailPage({
   params,
@@ -53,6 +56,100 @@ export default async function MemberDetailPage({
     // Non-fatal — the avatar fallback renders initials.
   }
   const avatarUrl = clerkImageUrl ?? member.photoUrl ?? null;
+
+  // Pending members have no history to show. Render a focused approval
+  // screen with the profile hero + Approve/Reject CTAs and skip the empty
+  // stat cards / payments / attendance / membership-history sections.
+  if (member.status === "pending") {
+    const activePlans = await db
+      .select({
+        id: plans.id,
+        name: plans.name,
+        durationDays: plans.durationDays,
+        priceLkr: plans.priceLkr,
+      })
+      .from(plans)
+      .where(eq(plans.isActive, true));
+
+    return (
+      <AdminPage
+        breadcrumbs={[
+          { label: "Members", href: "/admin/members" },
+          { label: member.fullName },
+        ]}
+      >
+        <div className="space-y-6">
+          {/* Hero card (no workout plan button — pending members can't view portal) */}
+          <div className="rounded-xl border bg-card p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-5">
+              <div className="shrink-0 self-center sm:self-start">
+                <Avatar className="size-20 rounded-2xl after:rounded-2xl">
+                  {avatarUrl ? (
+                    <AvatarImage
+                      src={avatarUrl}
+                      alt={member.fullName}
+                      className="rounded-2xl"
+                    />
+                  ) : null}
+                  <AvatarFallback className="rounded-2xl text-lg font-semibold">
+                    {initialsOf(member.fullName)}
+                  </AvatarFallback>
+                </Avatar>
+              </div>
+              <div className="min-w-0 flex-1 space-y-2 text-center sm:text-left">
+                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3">
+                  <h2 className="text-2xl font-semibold leading-tight break-words">
+                    {member.fullName}
+                  </h2>
+                  <StatusPill variant="pending">pending</StatusPill>
+                </div>
+                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-5 gap-y-2 text-sm text-muted-foreground">
+                  <span className="inline-flex items-center gap-1.5">
+                    <Mail className="size-4 shrink-0" />
+                    <span className="break-all">{member.email}</span>
+                  </span>
+                  {member.phone && (
+                    <span className="inline-flex items-center gap-1.5">
+                      <Phone className="size-4 shrink-0" />
+                      <span>{member.phone}</span>
+                    </span>
+                  )}
+                  <span className="inline-flex items-center gap-1.5">
+                    <Calendar className="size-4 shrink-0" />
+                    <span>Signed up {format(member.createdAt, "MMM d, yyyy")}</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Focused "needs approval" empty state */}
+          <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-8 text-center">
+            <div className="inline-flex items-center justify-center size-14 rounded-full bg-amber-500/15 text-amber-500 mb-4">
+              <Clock className="size-7" />
+            </div>
+            <h3 className="text-xl font-semibold mb-2">
+              {member.fullName} is awaiting approval
+            </h3>
+            <p className="text-sm text-muted-foreground max-w-md mx-auto mb-6">
+              Approve them with a plan to issue a Gym ID and grant gym access.
+              Member history (payments, attendance, workout plans) appears here
+              once approved. If this sign-up shouldn&apos;t proceed, you can
+              reject it instead.
+            </p>
+            <div className="inline-flex flex-wrap items-center justify-center gap-3">
+              <RejectButton memberId={member.id} memberName={member.fullName} />
+              <ApproveButton
+                memberId={member.id}
+                memberName={member.fullName}
+                plans={activePlans}
+              />
+            </div>
+          </div>
+        </div>
+      </AdminPage>
+    );
+  }
 
   const history = await db
     .select({

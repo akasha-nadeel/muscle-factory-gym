@@ -7,6 +7,7 @@ import {
 } from "@/components/ui/table";
 import { format } from "date-fns";
 import { ApproveButton } from "./_approve-button";
+import { RejectButton } from "./_reject-button";
 import { AdminPage } from "@/components/admin/admin-page";
 import { MemberAvatar } from "@/components/admin/member-avatar";
 import { EmptyState } from "@/components/admin/empty-state";
@@ -57,11 +58,14 @@ export default async function PendingPage() {
                     {format(m.createdAt, "PP")}
                   </div>
                 </div>
-                <ApproveButton
-                  memberId={m.id}
-                  memberName={m.fullName}
-                  plans={activePlans}
-                />
+                <div className="flex gap-2 shrink-0">
+                  <RejectButton memberId={m.id} memberName={m.fullName} />
+                  <ApproveButton
+                    memberId={m.id}
+                    memberName={m.fullName}
+                    plans={activePlans}
+                  />
+                </div>
               </li>
             ))}
           </ul>
@@ -91,11 +95,17 @@ export default async function PendingPage() {
                     <TableCell>{m.email}</TableCell>
                     <TableCell>{format(m.createdAt, "PP")}</TableCell>
                     <TableCell className="text-right">
-                      <ApproveButton
-                        memberId={m.id}
-                        memberName={m.fullName}
-                        plans={activePlans}
-                      />
+                      <div className="inline-flex gap-2">
+                        <RejectButton
+                          memberId={m.id}
+                          memberName={m.fullName}
+                        />
+                        <ApproveButton
+                          memberId={m.id}
+                          memberName={m.fullName}
+                          plans={activePlans}
+                        />
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

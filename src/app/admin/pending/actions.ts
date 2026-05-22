@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/db";
-import { profiles, plans, memberships, payments } from "@/db/schema";
+import { profiles, plans, memberships, payments, attendance } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { clerkClient } from "@clerk/nextjs/server";
@@ -230,4 +230,60 @@ export async function approveMember(
   }
 
   return result;
+}
+
+export type RejectPendingResult =
+  | { ok: true }
+  | { ok: false; error: string };
+
+/**
+ * Hard-delete a pending signup the admin doesn't want to approve.
+ * Pending members have no payments / attendance / workout plans by design,
+ * but we cascade-clean defensively. No type-the-name friction here — the
+ * member can just sign up again if it was a mistake.
+ *
+ * Guards: pending status only, never admin role.
+ */
+export async function rejectPendingMemberAction(
+  memberId: string,
+): Promise<RejectPendingResult> {
+  await requireAdminProfile();
+
+  const [member] = await db
+    .select()
+    .from(profiles)
+    .where(eq(profiles.id, memberId))
+    .limit(1);
+  if (!member) return { ok: false, error: "Member not found" };
+  if (member.role === "admin") {
+    return { ok: false, error: "Cannot reject an admin account" };
+  }
+  if (member.status !== "pending") {
+    return {
+      ok: false,
+      error:
+        "Member is no longer pending. Use Remove member on their detail page.",
+    };
+  }
+
+  await db.delete(attendance).where(eq(attendance.memberId, memberId));
+  await db.delete(payments).where(eq(payments.memberId, memberId));
+  await db.delete(memberships).where(eq(memberships.memberId, memberId));
+  await db.delete(profiles).where(eq(profiles.id, memberId));
+
+  try {
+    const client = await clerkClient();
+    await client.users.deleteUser(member.clerkUserId);
+  } catch (err) {
+    console.warn(
+      `[reject-pending] failed to delete Clerk user ${member.clerkUserId}: ${
+        err instanceof Error ? err.message : String(err)
+      }`,
+    );
+  }
+
+  revalidatePath("/admin/pending");
+  revalidatePath("/admin/members");
+  revalidatePath("/admin");
+  return { ok: true };
 }
