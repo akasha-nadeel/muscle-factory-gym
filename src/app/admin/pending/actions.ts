@@ -142,6 +142,28 @@ export async function _approveMemberUnsafe(input: ApproveInput): Promise<Approve
           });
         }
       }
+
+      // Redeem pending QR scan — if this member scanned the kiosk QR
+      // before being approved, record today's attendance for them now.
+      // Window: within last 24 hours (so a stale scan from days ago
+      // doesn't auto-check them in).
+      if (member.pendingQrScanAt) {
+        const scanAgeMs = Date.now() - member.pendingQrScanAt.getTime();
+        const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+        if (scanAgeMs < ONE_DAY_MS) {
+          await tx.insert(attendance).values({
+            memberId: input.memberId,
+            membershipId: created.id,
+            checkedInAt: member.pendingQrScanAt,
+            source: "qr_scan",
+            checkedInBy: null,
+          });
+        }
+        await tx
+          .update(profiles)
+          .set({ pendingQrScanAt: null })
+          .where(eq(profiles.id, input.memberId));
+      }
     });
   } catch {
     return { ok: false, error: "Approval transaction failed" };

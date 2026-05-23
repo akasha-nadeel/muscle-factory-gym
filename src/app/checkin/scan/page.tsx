@@ -1,10 +1,13 @@
 import Link from "next/link";
 import { format } from "date-fns";
 import { CheckCircle2, AlertCircle, ShieldAlert, Clock } from "lucide-react";
+import { eq } from "drizzle-orm";
 import { requireMemberProfile } from "@/lib/auth";
 import { verifyKioskToken } from "@/lib/qr/token";
 import { _recordAttendanceByMemberIdUnsafe } from "@/lib/checkin/record";
 import { todayInSL } from "@/lib/tz";
+import { db } from "@/db";
+import { profiles } from "@/db/schema";
 import { MemberAvatar } from "@/components/admin/member-avatar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -145,6 +148,30 @@ export default async function CheckinScanPage({
           <h1 className="text-xl font-semibold">Expired QR code</h1>
           <p className="text-sm text-muted-foreground">
             {tokenErrorMessage(verified.reason)}
+          </p>
+        </div>
+        <Button variant="outline" className="w-full" render={<Link href="/portal" />}>
+          Back to portal
+        </Button>
+      </ResultShell>
+    );
+  }
+
+  // Step 3.5 — pending members can't check in yet, but we save their scan
+  // so the approve action can record today's attendance retroactively.
+  if (profile.status === "pending") {
+    await db
+      .update(profiles)
+      .set({ pendingQrScanAt: new Date() })
+      .where(eq(profiles.id, profile.id));
+    return (
+      <ResultShell>
+        <StatusIcon Icon={Clock} variant="warning" />
+        <div className="text-center space-y-1">
+          <h1 className="text-xl font-semibold">Scan saved</h1>
+          <p className="text-sm text-muted-foreground">
+            Your sign-up is awaiting admin approval. Once approved, today&apos;s
+            check-in will be recorded automatically — no need to re-scan.
           </p>
         </div>
         <Button variant="outline" className="w-full" render={<Link href="/portal" />}>

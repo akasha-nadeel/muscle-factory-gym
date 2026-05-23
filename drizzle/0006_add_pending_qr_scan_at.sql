@@ -1,0 +1,1 @@
+ALTER TABLE "profiles" ADD COLUMN "pending_qr_scan_at" timestamp with time zone;

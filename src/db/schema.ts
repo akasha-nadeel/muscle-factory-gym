@@ -57,6 +57,13 @@ export const profiles = pgTable(
     phone: text("phone"),
     photoUrl: text("photo_url"),
     gymId: integer("gym_id").unique(),
+    /**
+     * Set when a pending member scans the kiosk QR. On admin approval the
+     * approve action checks this column; if it's a recent timestamp, an
+     * attendance row is inserted automatically so the member doesn't have
+     * to re-scan after approval.
+     */
+    pendingQrScanAt: timestamp("pending_qr_scan_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
