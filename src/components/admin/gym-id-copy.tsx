@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Copy, Check } from "lucide-react";
+import { toast } from "sonner";
 
 export function GymIdCopy({ gymId }: { gymId: number }) {
   const [copied, setCopied] = useState(false);
@@ -9,6 +10,7 @@ export function GymIdCopy({ gymId }: { gymId: number }) {
   function handleCopy() {
     void navigator.clipboard.writeText(String(gymId));
     setCopied(true);
+    toast.success(`Gym ID #${gymId} copied to clipboard`);
     setTimeout(() => setCopied(false), 1500);
   }
 
@@ -26,6 +28,7 @@ export function GymIdCopy({ gymId }: { gymId: number }) {
         type="button"
         onClick={handleCopy}
         aria-label={copied ? "Copied" : "Copy gym ID"}
+        title={copied ? "Copied!" : "Copy gym ID"}
         className="inline-flex items-center justify-center size-8 rounded-md hover:bg-accent transition-colors"
       >
         {copied ? (

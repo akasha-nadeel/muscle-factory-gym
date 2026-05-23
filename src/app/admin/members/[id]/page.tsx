@@ -432,7 +432,7 @@ export default async function MemberDetailPage({
           <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
             Danger zone
           </h3>
-          <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="rounded-lg border border-destructive/40 bg-destructive/15 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="text-sm">
               <div className="font-medium">Remove this member permanently</div>
               <div className="text-muted-foreground">

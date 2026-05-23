@@ -48,9 +48,8 @@ export function DeleteMemberButton({
     <>
       <Button
         size="sm"
-        variant="outline"
         onClick={() => setOpen(true)}
-        className="text-destructive hover:text-destructive border-destructive/30 hover:bg-destructive/10"
+        className="bg-destructive hover:bg-destructive/90 text-white hover:text-white border-transparent"
       >
         <Trash2 className="size-4" />
         Remove member
