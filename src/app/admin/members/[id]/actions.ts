@@ -13,6 +13,10 @@ import {
   workoutPlans,
 } from "@/db/schema";
 import { deleteWorkoutPlan } from "@/lib/storage/supabase-storage";
+import { isWiped } from "@/lib/profiles/wiped";
+
+const WIPED_ACTION_ERROR =
+  "This member has been removed. Financial history is retained but no new actions can be taken.";
 
 export type DeleteMemberResult =
   | { ok: true }
@@ -40,6 +44,8 @@ export async function deleteMemberAction(
     .where(eq(profiles.id, memberId))
     .limit(1);
   if (!member) return { ok: false, error: "Member not found" };
+
+  if (isWiped(member)) return { ok: false, error: WIPED_ACTION_ERROR };
 
   if (typedName.trim() !== member.fullName) {
     return { ok: false, error: "Typed name does not match member's name" };

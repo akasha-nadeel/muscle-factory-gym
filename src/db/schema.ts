@@ -53,7 +53,7 @@ export const profiles = pgTable(
     role: roleEnum("role").notNull().default("member"),
     status: profileStatusEnum("status").notNull().default("pending"),
     fullName: text("full_name").notNull(),
-    email: text("email").notNull(),
+    email: text("email"),
     phone: text("phone"),
     photoUrl: text("photo_url"),
     gymId: integer("gym_id").unique(),

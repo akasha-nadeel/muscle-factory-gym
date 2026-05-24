@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { profiles } from "@/db/schema";
 import { and, eq, ilike, or } from "drizzle-orm";
 import { requireAdmin } from "@/lib/auth";
+import { notWipedClause } from "@/lib/profiles/wiped";
 
 export async function GET(req: Request) {
   try {
@@ -37,7 +38,7 @@ export async function GET(req: Request) {
       photoUrl: profiles.photoUrl,
     })
     .from(profiles)
-    .where(and(eq(profiles.role, "member"), or(...matchers)))
+    .where(and(eq(profiles.role, "member"), notWipedClause, or(...matchers)))
     .orderBy(profiles.fullName)
     .limit(8);
 

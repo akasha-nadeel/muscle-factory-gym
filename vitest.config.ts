@@ -9,6 +9,10 @@ export default defineConfig({
     // Tests share a single remote Postgres — run files sequentially to
     // avoid cross-file race conditions (e.g. profiles.gym_id UNIQUE).
     fileParallelism: false,
+    // Supabase pooler latency from local dev can spike cascading cleanup
+    // hooks past the 10s default; 30s gives plenty of headroom.
+    hookTimeout: 30_000,
+    testTimeout: 30_000,
   },
   resolve: {
     alias: { "@": path.resolve(__dirname, "./src") },

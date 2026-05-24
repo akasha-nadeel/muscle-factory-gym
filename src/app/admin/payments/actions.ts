@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/db";
-import { payments } from "@/db/schema";
+import { payments, profiles } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { requireAdminProfile } from "@/lib/auth";
@@ -11,6 +11,10 @@ import {
   type PaymentKind,
   type PaymentMethod,
 } from "@/lib/payments/validate";
+import { isWiped } from "@/lib/profiles/wiped";
+
+const WIPED_ACTION_ERROR =
+  "This member has been removed. Financial history is retained but no new actions can be taken.";
 
 export type RecordPaymentInput = {
   memberId: string;
@@ -34,6 +38,27 @@ export async function _recordPaymentUnsafe(
     notes: input.notes,
   });
   if (!v.ok) return { ok: false, errors: v.errors };
+
+  if (v.value.kind === "admission") {
+    const [existingAdmission] = await db
+      .select({ id: payments.id })
+      .from(payments)
+      .where(
+        and(
+          eq(payments.memberId, input.memberId),
+          eq(payments.kind, "admission"),
+          eq(payments.status, "succeeded"),
+        ),
+      )
+      .limit(1);
+    if (existingAdmission) {
+      return {
+        ok: false,
+        error:
+          "Joining fee has already been recorded for this member. If the existing record is wrong, refund it for your books and contact support to remove it.",
+      };
+    }
+  }
 
   await db.insert(payments).values({
     memberId: input.memberId,
@@ -69,20 +94,23 @@ export async function _refundPaymentUnsafe(
   }
 
   // Block double-refunds: look for an existing refund row with this reference.
-  if (orig.reference) {
-    const existing = await db
-      .select()
-      .from(payments)
-      .where(
-        and(
-          eq(payments.reference, orig.reference),
-          eq(payments.status, "refunded"),
-        ),
-      )
-      .limit(1);
-    if (existing.length > 0) {
-      return { ok: false, error: "This payment has already been refunded" };
-    }
+  // Cash payments often have no reference, so fall back to the original
+  // payment's UUID so every refund row carries a unique link to its origin.
+  // Use `||` (not `??`) to also catch empty strings that may bypass validation
+  // (e.g. direct DB inserts in tests, or future code paths).
+  const refKey = orig.reference || orig.id;
+  const existing = await db
+    .select()
+    .from(payments)
+    .where(
+      and(
+        eq(payments.reference, refKey),
+        eq(payments.status, "refunded"),
+      ),
+    )
+    .limit(1);
+  if (existing.length > 0) {
+    return { ok: false, error: "This payment has already been refunded" };
   }
 
   const negative = (-Number(orig.amountLkr)).toFixed(2);
@@ -93,7 +121,7 @@ export async function _refundPaymentUnsafe(
     method: orig.method,
     kind: orig.kind,
     status: "refunded",
-    reference: orig.reference, // links the refund back to the original
+    reference: refKey, // links the refund back to the original (uses orig.id when no reference)
     notes: `Refund of payment ${orig.id}`,
     recordedBy: input.refundedByProfileId,
   });
@@ -108,6 +136,15 @@ export async function recordPayment(
   formData: FormData,
 ): Promise<PaymentActionResult> {
   const admin = await requireAdminProfile();
+
+  const [member] = await db
+    .select({ clerkUserId: profiles.clerkUserId })
+    .from(profiles)
+    .where(eq(profiles.id, bound.memberId))
+    .limit(1);
+  if (!member) return { ok: false, error: "Member not found" };
+  if (isWiped(member)) return { ok: false, error: WIPED_ACTION_ERROR };
+
   const method = String(formData.get("method") ?? "") as PaymentMethod;
   const kind = String(formData.get("kind") ?? "") as PaymentKind;
   const raw: RecordPaymentInput = {

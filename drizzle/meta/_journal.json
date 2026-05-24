@@ -50,6 +50,34 @@
       "when": 1779510457392,
       "tag": "0006_add_pending_qr_scan_at",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1779606290512,
+      "tag": "0007_mixed_network",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1779609299594,
+      "tag": "0008_gym_id_sequence",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1779624673178,
+      "tag": "0009_admission_per_member_unique",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1779642598544,
+      "tag": "0010_refund_per_original_unique",
+      "breakpoints": true
     }
   ]
 }

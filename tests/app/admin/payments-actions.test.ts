@@ -140,6 +140,101 @@ describe("_recordPaymentUnsafe", () => {
       .where(eq(payments.memberId, memberId));
     expect(rows.length).toBe(0);
   });
+
+  it("rejects a second admission fee with a friendly error", async () => {
+    const r1 = await _recordPaymentUnsafe({
+      memberId,
+      membershipId: null,
+      recordedByProfileId: adminId,
+      amountLkr: "2000",
+      method: "cash",
+      kind: "admission",
+      reference: "",
+      notes: "",
+    });
+    expect(r1.ok).toBe(true);
+
+    const r2 = await _recordPaymentUnsafe({
+      memberId,
+      membershipId: null,
+      recordedByProfileId: adminId,
+      amountLkr: "2000",
+      method: "cash",
+      kind: "admission",
+      reference: "",
+      notes: "",
+    });
+    expect(r2.ok).toBe(false);
+    expect(r2.ok === false && r2.error).toMatch(
+      /Joining fee has already been recorded/,
+    );
+
+    const rows = await db
+      .select()
+      .from(payments)
+      .where(eq(payments.memberId, memberId));
+    const succeededAdmissions = rows.filter(
+      (p) => p.kind === "admission" && p.status === "succeeded",
+    );
+    expect(succeededAdmissions.length).toBe(1);
+  });
+
+  it("after a refund, the original succeeded row remains and still blocks a new admission", { timeout: 30000 }, async () => {
+    // NOTE: the plan expected a refund-then-readmit flow to succeed, but
+    // _refundPaymentUnsafe does NOT flip the original row's status — it
+    // inserts a new negative row with status='refunded'. The original stays
+    // 'succeeded', so both the partial unique index and the app-level
+    // pre-check correctly continue to reject a fresh admission. Asserting
+    // actual behavior per "read the refund code carefully" guidance.
+    const r1 = await _recordPaymentUnsafe({
+      memberId,
+      membershipId: null,
+      recordedByProfileId: adminId,
+      amountLkr: "2000",
+      method: "cash",
+      kind: "admission",
+      reference: "ADM-001",
+      notes: "",
+    });
+    expect(r1.ok).toBe(true);
+
+    const [firstAdmission] = await db
+      .select()
+      .from(payments)
+      .where(eq(payments.memberId, memberId));
+    expect(firstAdmission.status).toBe("succeeded");
+
+    const refund = await _refundPaymentUnsafe({
+      originalPaymentId: firstAdmission.id,
+      refundedByProfileId: adminId,
+    });
+    expect(refund.ok).toBe(true);
+
+    const r2 = await _recordPaymentUnsafe({
+      memberId,
+      membershipId: null,
+      recordedByProfileId: adminId,
+      amountLkr: "2000",
+      method: "cash",
+      kind: "admission",
+      reference: "ADM-002",
+      notes: "",
+    });
+    expect(r2.ok).toBe(false);
+
+    const rows = await db
+      .select()
+      .from(payments)
+      .where(eq(payments.memberId, memberId));
+    const succeeded = rows.filter(
+      (p) => p.kind === "admission" && p.status === "succeeded",
+    );
+    const refunded = rows.filter(
+      (p) => p.kind === "admission" && p.status === "refunded",
+    );
+    expect(succeeded.length).toBe(1);
+    expect(refunded.length).toBe(1);
+  });
 });
 
 describe("_refundPaymentUnsafe", () => {
@@ -221,5 +316,75 @@ describe("_refundPaymentUnsafe", () => {
       refundedByProfileId: adminId,
     });
     expect(r.ok).toBe(false);
+  });
+
+  it("rejects double refund of a cash payment with no reference", async () => {
+    // Seed a cash payment with an empty reference, mirroring how the admin
+    // form submits cash payments (empty string passes through validation as
+    // null, but we use '' here to cover the most permissive case).
+    const [pay] = await db
+      .insert(payments)
+      .values({
+        memberId,
+        membershipId,
+        amountLkr: "5000",
+        method: "cash",
+        kind: "membership",
+        status: "succeeded",
+        reference: "",
+        recordedBy: adminId,
+      })
+      .returning();
+
+    const r1 = await _refundPaymentUnsafe({
+      originalPaymentId: pay.id,
+      refundedByProfileId: adminId,
+    });
+    expect(r1.ok).toBe(true);
+
+    const r2 = await _refundPaymentUnsafe({
+      originalPaymentId: pay.id,
+      refundedByProfileId: adminId,
+    });
+    expect(r2.ok).toBe(false);
+    expect(r2.ok === false && r2.error).toMatch(/already been refunded/);
+
+    const rows = await db
+      .select()
+      .from(payments)
+      .where(eq(payments.memberId, memberId));
+    const refunds = rows.filter((p) => p.status === "refunded");
+    expect(refunds.length).toBe(1);
+  });
+
+  it("refund row of a no-reference payment carries the original payment id as its reference", async () => {
+    const [pay] = await db
+      .insert(payments)
+      .values({
+        memberId,
+        membershipId,
+        amountLkr: "5000",
+        method: "cash",
+        kind: "membership",
+        status: "succeeded",
+        reference: "",
+        recordedBy: adminId,
+      })
+      .returning();
+    const origPaymentId = pay.id;
+
+    const r = await _refundPaymentUnsafe({
+      originalPaymentId: origPaymentId,
+      refundedByProfileId: adminId,
+    });
+    expect(r.ok).toBe(true);
+
+    const rows = await db
+      .select()
+      .from(payments)
+      .where(eq(payments.memberId, memberId));
+    const refund = rows.find((p) => p.status === "refunded");
+    expect(refund).toBeDefined();
+    expect(refund!.reference).toBe(origPaymentId);
   });
 });

@@ -33,6 +33,7 @@ import { GymIdCopy } from "@/components/admin/gym-id-copy";
 import { ApproveButton } from "@/app/admin/pending/_approve-button";
 import { RejectButton } from "@/app/admin/pending/_reject-button";
 import { Clock } from "lucide-react";
+import { isWiped } from "@/lib/profiles/wiped";
 
 export default async function MemberDetailPage({
   params,
@@ -48,6 +49,8 @@ export default async function MemberDetailPage({
     .where(eq(profiles.id, id))
     .limit(1);
   if (!member) notFound();
+
+  const wiped = isWiped(member);
 
   // Pull the member's Clerk avatar so admin sees the same image Clerk uses
   // for emails / member's own profile. Falls back to DB photoUrl, then to
@@ -256,6 +259,11 @@ export default async function MemberDetailPage({
       ]}
     >
       <div className="space-y-6">
+        {wiped && (
+          <div className="rounded-md border border-amber-500/40 bg-amber-50 dark:bg-amber-950/30 px-4 py-3 text-sm">
+            This member&apos;s personal data was removed after 180 days of inactivity. Financial history is retained for the gym&apos;s records.
+          </div>
+        )}
         {/* Hero card */}
         <div className="rounded-xl border bg-card p-4 sm:p-6 relative">
           {/* Desktop: gym id copy widget at top-right */}
@@ -265,13 +273,15 @@ export default async function MemberDetailPage({
             </div>
           )}
           {/* Send workout plan: bottom-right of hero on sm+, full-width on mobile */}
-          <div className="hidden sm:block absolute bottom-4 right-4">
-            <SendWorkoutPlanButton
-              memberId={member.id}
-              memberName={member.fullName}
-              currentPlan={currentWorkoutPlan ?? null}
-            />
-          </div>
+          {!wiped && (
+            <div className="hidden sm:block absolute bottom-4 right-4">
+              <SendWorkoutPlanButton
+                memberId={member.id}
+                memberName={member.fullName}
+                currentPlan={currentWorkoutPlan ?? null}
+              />
+            </div>
+          )}
           <div className="flex flex-col sm:flex-row sm:items-center gap-5">
             <div className="shrink-0 self-center sm:self-start">
               <Avatar className="size-20 rounded-2xl after:rounded-2xl">
@@ -295,11 +305,13 @@ export default async function MemberDetailPage({
                 <StatusPill variant={member.status}>{member.status}</StatusPill>
               </div>
               <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-5 gap-y-2 text-sm text-muted-foreground">
-                <span className="inline-flex items-center gap-1.5">
-                  <Mail className="size-4 shrink-0" />
-                  <span className="break-all">{member.email}</span>
-                </span>
-                {member.phone && (
+                {!wiped && (
+                  <span className="inline-flex items-center gap-1.5">
+                    <Mail className="size-4 shrink-0" />
+                    <span className="break-all">{member.email}</span>
+                  </span>
+                )}
+                {!wiped && member.phone && (
                   <span className="inline-flex items-center gap-1.5">
                     <Phone className="size-4 shrink-0" />
                     <span>{member.phone}</span>
@@ -319,11 +331,13 @@ export default async function MemberDetailPage({
                 <GymIdCopy gymId={member.gymId} />
               </div>
             )}
-            <SendWorkoutPlanButton
-              memberId={member.id}
-              memberName={member.fullName}
-              currentPlan={currentWorkoutPlan ?? null}
-            />
+            {!wiped && (
+              <SendWorkoutPlanButton
+                memberId={member.id}
+                memberName={member.fullName}
+                currentPlan={currentWorkoutPlan ?? null}
+              />
+            )}
           </div>
         </div>
 
@@ -373,10 +387,12 @@ export default async function MemberDetailPage({
         <div>
           <div className="flex justify-between items-center mb-3">
             <h3 className="text-lg font-semibold">Payments</h3>
-            <RecordPaymentButton
-              memberId={member.id}
-              currentMembershipId={current?.id ?? null}
-            />
+            {!wiped && (
+              <RecordPaymentButton
+                memberId={member.id}
+                currentMembershipId={current?.id ?? null}
+              />
+            )}
           </div>
           <PaymentsTable
             rows={paymentRows}
@@ -440,10 +456,12 @@ export default async function MemberDetailPage({
                 Cannot be undone.
               </div>
             </div>
-            <DeleteMemberButton
-              memberId={member.id}
-              memberName={member.fullName}
-            />
+            {!wiped && (
+              <DeleteMemberButton
+                memberId={member.id}
+                memberName={member.fullName}
+              />
+            )}
           </div>
         </div>
       </div>

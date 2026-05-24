@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { _inactivateStaleMembersUnsafe } from "@/lib/cron/inactivate";
+import { _wipeStaleMembersUnsafe } from "@/lib/cron/wipe";
 import { todayInSL } from "@/lib/tz";
 
 export async function POST(req: Request) {
@@ -16,7 +16,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  const summary = await _inactivateStaleMembersUnsafe({
+  const summary = await _wipeStaleMembersUnsafe({
     todaySL: todayInSL(),
   });
   return NextResponse.json(summary);

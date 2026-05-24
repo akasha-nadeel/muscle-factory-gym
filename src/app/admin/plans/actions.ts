@@ -1,8 +1,8 @@
 "use server";
 
 import { db } from "@/db";
-import { plans } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { plans, memberships } from "@/db/schema";
+import { and, count, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { requireAdminProfile } from "@/lib/auth";
 import { validatePlanInput, type PlanInput } from "@/lib/plans/validate";
@@ -32,6 +32,38 @@ export async function _updatePlanUnsafe(
 ): Promise<PlanActionResult> {
   const v = validatePlanInput(raw);
   if (!v.ok) return { ok: false, errors: v.errors };
+
+  const [existing] = await db
+    .select()
+    .from(plans)
+    .where(eq(plans.id, id))
+    .limit(1);
+  if (!existing) return { ok: false, errors: { _form: "Plan not found" } };
+
+  // Compare numerically so a form value of "4500" matches a DB value of
+  // "4500.00". priceLkr is a Postgres numeric (string in Drizzle); coercing
+  // both sides via Number is safe for LKR amounts (whole or 2-decimal).
+  const priceChanging = Number(existing.priceLkr) !== Number(v.value.priceLkr);
+  if (priceChanging) {
+    const [{ count: activeCount } = { count: 0 }] = await db
+      .select({ count: count() })
+      .from(memberships)
+      .where(
+        and(eq(memberships.planId, id), eq(memberships.status, "active")),
+      );
+    const n = Number(activeCount ?? 0);
+    if (n > 0) {
+      return {
+        ok: false,
+        errors: {
+          _form: `Cannot change price while ${n} active member${
+            n === 1 ? "" : "s"
+          } ${n === 1 ? "is" : "are"} on this plan. Disable this plan and create a new one with the new price for future members.`,
+        },
+      };
+    }
+  }
+
   await db
     .update(plans)
     .set({

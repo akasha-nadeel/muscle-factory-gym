@@ -25,8 +25,24 @@ async function clean() {
     .where(like(profiles.clerkUserId, `${CLERK_PREFIX}%`));
 }
 
+// Post-Task-7: gym IDs come from a monotonic Postgres sequence. The
+// sequence advances independently of MAX(gym_id) — other tests in the
+// suite may have called nextval() and pushed it past the current MAX.
+// Pin it to MAX (or 999 on empty DB) before each test so assertions of
+// the form `baseline + 1` continue to hold.
+async function resetSequence() {
+  await db.execute(sql`
+    SELECT setval(
+      'gym_id_seq',
+      GREATEST(999, COALESCE((SELECT MAX(gym_id) FROM profiles), 999)),
+      true
+    )
+  `);
+}
+
 beforeEach(async () => {
   await clean();
+  await resetSequence();
   const [pl] = await db
     .insert(plans)
     .values({ name: PLAN_NAME, durationDays: 30, priceLkr: "5000" })

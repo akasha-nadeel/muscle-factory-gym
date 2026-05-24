@@ -47,7 +47,7 @@ export default async function ProfilePage() {
       key={`${me.fullName}::${me.phone ?? ""}`}
       initial={{ fullName: me.fullName, phone: me.phone ?? "" }}
       profile={{
-        email: me.email,
+        email: me.email ?? "",
         gymId: me.gymId,
         status: me.status,
         photoUrl: avatarUrl,

@@ -2,7 +2,16 @@
 
 import { db } from "@/db";
 import { profiles, plans, memberships, payments, attendance } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
+
+// Thrown inside _approveMemberUnsafe's transaction when a racing approval
+// (or a manually-inserted membership) leaves the target member already
+// holding an active membership. Caught by the outer try/catch.
+class DuplicateMembershipError extends Error {
+  constructor(public endDate: string) {
+    super("duplicate active membership");
+  }
+}
 import { revalidatePath } from "next/cache";
 import { clerkClient } from "@clerk/nextjs/server";
 import { requireAdminProfile } from "@/lib/auth";
@@ -69,6 +78,25 @@ export async function _approveMemberUnsafe(input: ApproveInput): Promise<Approve
 
   try {
     await db.transaction(async (tx) => {
+      // Guard: if a racing approval already gave this member an active
+      // membership in another transaction, abort with a friendly error.
+      const [existingActive] = await tx
+        .select({
+          id: memberships.id,
+          endDate: memberships.endDate,
+        })
+        .from(memberships)
+        .where(
+          and(
+            eq(memberships.memberId, input.memberId),
+            eq(memberships.status, "active"),
+          ),
+        )
+        .limit(1);
+      if (existingActive) {
+        throw new DuplicateMembershipError(existingActive.endDate);
+      }
+
       const [created] = await tx
         .insert(memberships)
         .values({
@@ -165,7 +193,13 @@ export async function _approveMemberUnsafe(input: ApproveInput): Promise<Approve
           .where(eq(profiles.id, input.memberId));
       }
     });
-  } catch {
+  } catch (err) {
+    if (err instanceof DuplicateMembershipError) {
+      return {
+        ok: false,
+        error: `This member already has an active membership ending ${err.endDate}. Cancel or end that membership first before approving a new one.`,
+      };
+    }
     return { ok: false, error: "Approval transaction failed" };
   }
 
@@ -233,7 +267,7 @@ export async function approveMember(
         .where(eq(memberships.memberId, member.id))
         .orderBy(desc(memberships.endDate))
         .limit(1);
-      if (latestMembership) {
+      if (latestMembership && member.email) {
         await sendWelcomeEmail({
           toEmail: member.email,
           memberName: member.fullName,

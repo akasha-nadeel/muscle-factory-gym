@@ -97,4 +97,65 @@ describe("approveMember", () => {
     });
     expect(r.ok).toBe(false);
   });
+
+  it("rejects approval when member already has an active membership", async () => {
+    // Seed an existing active membership for this member (simulates the
+    // racing-double-approval window where two transactions both pass the
+    // line-38 status check and the second one would otherwise insert a
+    // duplicate).
+    await db.insert(memberships).values({
+      memberId,
+      planId,
+      startDate: "2026-05-01",
+      endDate: "2026-06-30",
+      status: "active",
+      createdBy: adminId,
+    });
+
+    const r = await _approveMemberUnsafe({
+      memberId,
+      planId,
+      approvedByProfileId: adminId,
+      today: "2026-05-15",
+    });
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      expect(r.error).toMatch(/already has an active membership/);
+      expect(r.error).toContain("2026-06-30");
+    }
+
+    const mems = await db
+      .select()
+      .from(memberships)
+      .where(eq(memberships.memberId, memberId));
+    expect(mems.length).toBe(1);
+  });
+
+  it("allows approval when member only has expired or cancelled memberships", async () => {
+    await db.insert(memberships).values({
+      memberId,
+      planId,
+      startDate: "2025-01-01",
+      endDate: "2025-01-31",
+      status: "expired",
+      createdBy: adminId,
+    });
+
+    const r = await _approveMemberUnsafe({
+      memberId,
+      planId,
+      approvedByProfileId: adminId,
+      today: "2026-05-15",
+    });
+    expect(r.ok).toBe(true);
+
+    const mems = await db
+      .select()
+      .from(memberships)
+      .where(eq(memberships.memberId, memberId));
+    expect(mems.length).toBe(2);
+    const active = mems.filter((m) => m.status === "active");
+    expect(active.length).toBe(1);
+    expect(active[0].endDate).toBe("2026-06-13");
+  });
 });

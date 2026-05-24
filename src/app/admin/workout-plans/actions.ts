@@ -11,6 +11,10 @@ import {
 } from "@/lib/storage/supabase-storage";
 import { sendWorkoutPlanEmail } from "@/lib/email/send-workout-plan";
 import { validateWorkoutPlanFile } from "@/lib/workout-plans/validate";
+import { isWiped } from "@/lib/profiles/wiped";
+
+const WIPED_ACTION_ERROR =
+  "This member has been removed. Financial history is retained but no new actions can be taken.";
 
 export type WorkoutPlanResult =
   | { ok: true }
@@ -43,6 +47,7 @@ export async function uploadWorkoutPlanAction(
     .where(eq(profiles.id, memberId))
     .limit(1);
   if (!member) return { ok: false, error: "Member not found" };
+  if (isWiped(member)) return { ok: false, error: WIPED_ACTION_ERROR };
 
   const buffer = await file.arrayBuffer();
 
@@ -90,11 +95,13 @@ export async function uploadWorkoutPlanAction(
     );
   }
 
-  await sendWorkoutPlanEmail({
-    toEmail: member.email,
-    memberName: member.fullName,
-    fileName: file.name,
-  });
+  if (member.email) {
+    await sendWorkoutPlanEmail({
+      toEmail: member.email,
+      memberName: member.fullName,
+      fileName: file.name,
+    });
+  }
 
   revalidatePath(`/admin/members/${memberId}`);
   revalidatePath("/portal");

@@ -25,6 +25,7 @@ import {
   nextSortFor,
   type ParsedSort,
 } from "@/lib/sort-params";
+import { notWipedClause } from "@/lib/profiles/wiped";
 
 const PAGE_SIZE = 25;
 const SORT_FIELDS = ["gymId", "fullName", "status", "createdAt"] as const;
@@ -59,6 +60,7 @@ export default async function MembersPage({
   );
 
   const filters = [eq(profiles.role, "member")];
+  filters.push(notWipedClause);
   if (status) filters.push(eq(profiles.status, status));
   if (q) {
     const pattern = `%${q}%`;

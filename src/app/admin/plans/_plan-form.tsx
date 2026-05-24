@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect } from "react";
+import { toast } from "sonner";
 import { createPlan, updatePlan, type PlanActionResult } from "./actions";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,6 +30,15 @@ export function PlanForm(props: Props) {
   useEffect(() => {
     if (state?.ok) props.onDone();
   }, [state, props]);
+
+  const formErr =
+    state && !state.ok && "errors" in state && "_form" in state.errors
+      ? (state.errors as { _form: string })._form
+      : undefined;
+
+  useEffect(() => {
+    if (formErr) toast.error(formErr);
+  }, [formErr]);
 
   const fieldErr = (k: "name" | "durationDays" | "priceLkr") =>
     state && !state.ok && "errors" in state && k in state.errors
@@ -72,6 +82,11 @@ export function PlanForm(props: Props) {
           <p className="text-destructive text-sm">{fieldErr("priceLkr")}</p>
         )}
       </div>
+      {formErr && (
+        <p className="text-destructive text-sm" role="alert">
+          {formErr}
+        </p>
+      )}
       <div className="flex justify-end gap-2">
         <Button type="submit" disabled={pending}>
           {pending ? "Saving…" : props.mode === "create" ? "Create" : "Save"}
