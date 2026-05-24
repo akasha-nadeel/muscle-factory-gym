@@ -25,3 +25,42 @@ export function slMonthOf(d: Date): string {
   const mm = String(sl.getUTCMonth() + 1).padStart(2, "0");
   return `${yyyy}-${mm}`;
 }
+
+const SL_DATE_TIME_FMT = new Intl.DateTimeFormat("en-US", {
+  timeZone: "Asia/Colombo",
+  year: "numeric",
+  month: "short",
+  day: "numeric",
+  hour: "numeric",
+  minute: "2-digit",
+  hour12: true,
+});
+
+const SL_DATE_FMT = new Intl.DateTimeFormat("en-US", {
+  timeZone: "Asia/Colombo",
+  year: "numeric",
+  month: "short",
+  day: "numeric",
+});
+
+const SL_TIME_FMT = new Intl.DateTimeFormat("en-US", {
+  timeZone: "Asia/Colombo",
+  hour: "numeric",
+  minute: "2-digit",
+  hour12: true,
+});
+
+/** "May 23, 2026, 10:49 AM" in Sri Lanka time, regardless of server TZ. */
+export function formatSLDateTime(d: Date): string {
+  return SL_DATE_TIME_FMT.format(d);
+}
+
+/** "May 23, 2026" in Sri Lanka time. */
+export function formatSLDate(d: Date): string {
+  return SL_DATE_FMT.format(d);
+}
+
+/** "10:49 AM" in Sri Lanka time. */
+export function formatSLTime(d: Date): string {
+  return SL_TIME_FMT.format(d);
+}

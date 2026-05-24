@@ -22,7 +22,7 @@ import { GymIdCopy } from "@/components/admin/gym-id-copy";
 import { initialsOf } from "@/lib/initials";
 import { getCurrentMembership } from "@/lib/memberships/current";
 import { daysRemaining } from "@/lib/days-remaining";
-import { todayInSL } from "@/lib/tz";
+import { todayInSL, formatSLDate, formatSLTime, formatSLDateTime } from "@/lib/tz";
 import { computeOutstanding } from "@/lib/payments/outstanding";
 import {
   inferCyclePeriod,
@@ -375,9 +375,9 @@ export default async function PortalHome() {
                 className="rounded-lg border bg-card px-3 py-2.5 flex items-center justify-between gap-3"
               >
                 <div className="min-w-0 text-sm">
-                  <div className="font-medium">{format(r.checkedInAt, "PP")}</div>
+                  <div className="font-medium">{formatSLDate(r.checkedInAt)}</div>
                   <div className="text-xs text-muted-foreground mt-0.5">
-                    {format(r.checkedInAt, "p")}
+                    {formatSLTime(r.checkedInAt)}
                   </div>
                 </div>
                 <Badge variant="outline" className="shrink-0">
@@ -407,7 +407,7 @@ export default async function PortalHome() {
               )}
               {attendanceRows.map((r) => (
                 <TableRow key={r.id}>
-                  <TableCell>{format(r.checkedInAt, "PPp")}</TableCell>
+                  <TableCell>{formatSLDateTime(r.checkedInAt)}</TableCell>
                   <TableCell>
                     <Badge variant="outline">
                       {r.source === "kiosk_id" ? "Kiosk" : r.source === "qr_scan" ? "QR scan" : "Manual"}

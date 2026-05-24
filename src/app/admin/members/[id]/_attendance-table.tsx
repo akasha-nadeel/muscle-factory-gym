@@ -1,4 +1,4 @@
-import { format } from "date-fns";
+import { formatSLDateTime } from "@/lib/tz";
 import {
   Table,
   TableBody,
@@ -48,7 +48,7 @@ export function AttendanceTable({ rows }: { rows: AttendanceRow[] }) {
         <TableBody>
           {rows.map((r) => (
             <TableRow key={r.id}>
-              <TableCell>{format(r.checkedInAt, "PPp")}</TableCell>
+              <TableCell>{formatSLDateTime(r.checkedInAt)}</TableCell>
               <TableCell>
                 <Badge variant="outline">{sourceLabel(r.source)}</Badge>
               </TableCell>
