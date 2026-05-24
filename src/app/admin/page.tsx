@@ -3,18 +3,11 @@ import { db } from "@/db";
 import { profiles, payments, attendance } from "@/db/schema";
 import { and, eq, gte, lt, desc, sql } from "drizzle-orm";
 import { requireAdminProfile } from "@/lib/auth";
-import {
-  Wallet,
-  Users,
-  UserPlus,
-  AlertCircle,
-  Tag,
-  Search,
-} from "lucide-react";
+import { Wallet, Users, UserPlus, AlertCircle } from "lucide-react";
 import { AdminPage } from "@/components/admin/admin-page";
 import { StatCard } from "@/components/admin/stat-card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { RecordPaymentModal } from "@/components/admin/record-payment-modal";
 import {
   RecentPaymentsPanel,
   type RecentPayment,
@@ -161,35 +154,32 @@ export default async function AdminHome({
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              render={<Link href="/admin/plans" />}
-            >
-              <Tag className="size-4" />
-              New plan
-            </Button>
+            <RecordPaymentModal />
             <Button
               variant="outline"
               size="sm"
               render={<Link href="/admin/pending" />}
-              className="relative"
+              className={
+                pendingCount > 0
+                  ? // Has work to do: amber accent draws the admin's eye without
+                    // competing with the orange primary CTA next to it.
+                    "relative bg-amber-50 border-amber-500/50 text-amber-900 hover:bg-amber-100 hover:border-amber-500/70 dark:bg-amber-950/30 dark:border-amber-500/40 dark:text-amber-100 dark:hover:bg-amber-950/50"
+                  : // All caught up: neutral surface with subtle fill so it
+                    // stands on its own next to the orange primary instead of
+                    // looking ghosted in dark mode.
+                    "relative bg-card hover:bg-muted dark:bg-card dark:hover:bg-muted/50"
+              }
             >
               <UserPlus className="size-4" />
               Approve pending
               {pendingCount > 0 && (
-                <Badge className="ml-1 -mr-1 h-5 min-w-5 px-1.5">
+                <span
+                  aria-label={`${pendingCount} pending`}
+                  className="ml-1 -mr-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1.5 text-[0.65rem] font-semibold leading-none text-white tabular-nums"
+                >
                   {pendingCount}
-                </Badge>
+                </span>
               )}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              render={<Link href="/admin/members" />}
-            >
-              <Search className="size-4" />
-              Find member
             </Button>
           </div>
         </div>
