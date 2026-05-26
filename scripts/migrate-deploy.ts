@@ -28,10 +28,15 @@ import { join } from "node:path";
 const MIGRATIONS_DIR = "drizzle";
 
 async function main() {
-  const connStr = process.env.DIRECT_DATABASE_URL ?? process.env.DATABASE_URL;
+  // Prefer DATABASE_URL (the IPv4 pooler) over DIRECT_DATABASE_URL (IPv6
+  // direct). Vercel Hobby build runners and many ISPs (notably Sri Lanka)
+  // can't route IPv6 to Supabase's direct host, so the pooler is the only
+  // universally reachable option. With prepare:false the transaction
+  // pooler handles our single-statement DDL migrations cleanly.
+  const connStr = process.env.DATABASE_URL ?? process.env.DIRECT_DATABASE_URL;
   if (!connStr) {
     console.error(
-      "[migrate] Missing DIRECT_DATABASE_URL / DATABASE_URL — cannot run migrations.",
+      "[migrate] Missing DATABASE_URL / DIRECT_DATABASE_URL — cannot run migrations.",
     );
     process.exit(1);
   }
