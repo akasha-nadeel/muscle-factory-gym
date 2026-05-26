@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { MemberAvatar } from "@/components/admin/member-avatar";
 import { RecordPaymentForm } from "@/components/admin/record-payment-form";
+import { displayName } from "@/lib/profiles/display-name";
 import { cn } from "@/lib/utils";
 
 type MemberResult = {
@@ -74,7 +75,7 @@ export function RecordPaymentModal() {
                 key={selected.id}
                 memberId={selected.id}
                 currentMembershipId={selected.activeMembershipId}
-                successToastName={selected.fullName}
+                successToastName={displayName(selected.fullName)}
                 onSuccess={() => handleOpenChange(false)}
               />
             </div>
@@ -100,7 +101,7 @@ function SelectedMemberHeader({
         size="md"
       />
       <div className="flex-1 min-w-0">
-        <div className="font-medium truncate">{member.fullName}</div>
+        <div className="font-medium truncate">{displayName(member.fullName)}</div>
         <div className="text-xs text-muted-foreground flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
           {member.gymId !== null && (
             <span className="font-mono">#{member.gymId}</span>
@@ -226,7 +227,7 @@ function MemberPicker({ onPick }: { onPick: (m: MemberResult) => void }) {
                     />
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-medium truncate">
-                        {m.fullName}
+                        {displayName(m.fullName)}
                       </div>
                       <div className="text-xs text-muted-foreground flex flex-wrap gap-x-2 gap-y-0.5">
                         {m.gymId !== null && (

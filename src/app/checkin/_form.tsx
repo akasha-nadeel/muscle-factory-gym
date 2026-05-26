@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { format, parseISO } from "date-fns";
 import { TriangleAlert } from "lucide-react";
+import { displayName } from "@/lib/profiles/display-name";
 
 const RESULT_DISPLAY_MS = 5000;
 const RECENT_IDS_KEY = "gym-checkin-recent-ids";
@@ -108,7 +109,7 @@ export function CheckinForm() {
         });
       } else {
         const days = state.member.daysRemaining;
-        toast.success(`Welcome, ${state.member.fullName}`, {
+        toast.success(`Welcome, ${displayName(state.member.fullName)}`, {
           description: `${state.member.planName} — ${days} day${
             days === 1 ? "" : "s"
           } remaining`,
@@ -169,7 +170,7 @@ export function CheckinForm() {
             PAYMENT DUE
           </h1>
           <p className="text-xl sm:text-3xl font-semibold text-zinc-50 mb-6">
-            Hi, {paymentWarning.fullName}
+            Hi, {displayName(paymentWarning.fullName)}
           </p>
           {(() => {
             // Prefer the actual missed due date; fall back to next-due or end-date.

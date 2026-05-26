@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
+import { displayName } from "@/lib/profiles/display-name";
 import { cn } from "@/lib/utils";
 
 type Member = {
@@ -124,7 +125,7 @@ export function MemberSearch() {
                     onClick={() => go(m.id)}
                     className="w-full text-left px-3 py-2 text-sm hover:bg-accent focus:bg-accent focus:outline-none"
                   >
-                    <div className="font-medium">{m.fullName}</div>
+                    <div className="font-medium">{displayName(m.fullName)}</div>
                     <div className="text-xs text-muted-foreground">
                       {m.gymId !== null && (
                         <span className="font-mono mr-2">#{m.gymId}</span>

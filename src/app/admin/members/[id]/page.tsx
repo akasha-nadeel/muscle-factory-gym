@@ -35,6 +35,7 @@ import { ApproveButton } from "@/app/admin/pending/_approve-button";
 import { RejectButton } from "@/app/admin/pending/_reject-button";
 import { Clock } from "lucide-react";
 import { isWiped } from "@/lib/profiles/wiped";
+import { displayName } from "@/lib/profiles/display-name";
 
 export default async function MemberDetailPage({
   params,
@@ -84,7 +85,7 @@ export default async function MemberDetailPage({
       <AdminPage
         breadcrumbs={[
           { label: "Members", href: "/admin/members" },
-          { label: member.fullName },
+          { label: displayName(member.fullName) },
         ]}
       >
         <div className="space-y-6">
@@ -108,7 +109,7 @@ export default async function MemberDetailPage({
               <div className="min-w-0 flex-1 space-y-2 text-center sm:text-left">
                 <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3">
                   <h2 className="text-2xl font-semibold leading-tight break-words">
-                    {member.fullName}
+                    {displayName(member.fullName)}
                   </h2>
                   <StatusPill variant="pending">pending</StatusPill>
                 </div>
@@ -138,7 +139,7 @@ export default async function MemberDetailPage({
               <Clock className="size-7" />
             </div>
             <h3 className="text-xl font-semibold mb-2">
-              {member.fullName} is awaiting approval
+              {displayName(member.fullName)} is awaiting approval
             </h3>
             <p className="text-sm text-muted-foreground max-w-md mx-auto mb-6">
               Approve them with a plan to issue a Gym ID and grant gym access.
@@ -292,7 +293,7 @@ export default async function MemberDetailPage({
     <AdminPage
       breadcrumbs={[
         { label: "Members", href: "/admin/members" },
-        { label: member.fullName },
+        { label: displayName(member.fullName) },
       ]}
     >
       <div className="space-y-6">
@@ -359,7 +360,7 @@ export default async function MemberDetailPage({
             <div className="min-w-0 flex-1 space-y-2 text-center sm:text-left">
               <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3">
                 <h2 className="text-2xl font-semibold leading-tight break-words">
-                  {member.fullName}
+                  {displayName(member.fullName)}
                 </h2>
                 <StatusPill variant={member.status}>{member.status}</StatusPill>
               </div>
@@ -542,6 +543,8 @@ export default async function MemberDetailPage({
               <DeleteMemberButton
                 memberId={member.id}
                 memberName={member.fullName}
+                memberPhotoUrl={avatarUrl}
+                memberGymId={member.gymId}
               />
             )}
           </div>

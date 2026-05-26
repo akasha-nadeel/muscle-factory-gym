@@ -27,6 +27,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { MemberAvatar } from "@/components/admin/member-avatar";
+import { displayName, firstNameOf } from "@/lib/profiles/display-name";
 import { formatSLDate } from "@/lib/tz";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -39,17 +40,6 @@ function formatBytes(n: number): string {
   return `${(n / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-/**
- * Best-effort first name for the CTA label. Falls back to the full string
- * when there's only one token (e.g. when `fullName` is actually an email
- * because the member signed up via OAuth without setting a real name).
- */
-function firstNameOf(fullName: string): string {
-  const first = fullName.trim().split(/\s+/)[0] ?? fullName;
-  // Don't show an email-shaped string in the button — feels weird.
-  if (first.includes("@")) return "member";
-  return first;
-}
 
 export function SendWorkoutPlanButton({
   memberId,
@@ -83,7 +73,7 @@ export function SendWorkoutPlanButton({
 
   useEffect(() => {
     if (state?.ok) {
-      toast.success(`Workout plan sent to ${memberName}`);
+      toast.success(`Workout plan sent to ${displayName(memberName)}`);
       setOpen(false);
       setFile(null);
       setClientError(null);
@@ -174,7 +164,7 @@ export function SendWorkoutPlanButton({
               size="md"
             />
             <div className="min-w-0 flex-1">
-              <div className="font-medium truncate">{memberName}</div>
+              <div className="font-medium truncate">{displayName(memberName)}</div>
               <div className="text-xs text-muted-foreground flex flex-wrap gap-x-2 gap-y-0.5 mt-0.5">
                 {memberGymId !== null && memberGymId !== undefined && (
                   <span className="font-mono">#{memberGymId}</span>

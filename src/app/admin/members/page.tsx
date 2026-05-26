@@ -26,6 +26,7 @@ import {
   type ParsedSort,
 } from "@/lib/sort-params";
 import { notWipedClause } from "@/lib/profiles/wiped";
+import { displayName } from "@/lib/profiles/display-name";
 
 const PAGE_SIZE = 25;
 const SORT_FIELDS = ["gymId", "fullName", "status", "createdAt"] as const;
@@ -157,7 +158,7 @@ export default async function MembersPage({
                   />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium truncate">{m.fullName}</span>
+                      <span className="font-medium truncate">{displayName(m.fullName)}</span>
                       <StatusPill variant={m.status}>{m.status}</StatusPill>
                     </div>
                     <div className="text-xs text-muted-foreground truncate mt-0.5">
@@ -221,7 +222,7 @@ export default async function MembersPage({
                   <TableCell className="font-mono tabular-nums">
                     {m.gymId ?? "—"}
                   </TableCell>
-                  <TableCell className="font-medium">{m.fullName}</TableCell>
+                  <TableCell className="font-medium">{displayName(m.fullName)}</TableCell>
                   <TableCell className="text-muted-foreground">{m.email}</TableCell>
                   <TableCell>
                     <StatusPill variant={m.status}>{m.status}</StatusPill>

@@ -12,6 +12,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MemberAvatar } from "@/components/admin/member-avatar";
+import { displayName, firstNameOf } from "@/lib/profiles/display-name";
 import { cn } from "@/lib/utils";
 import { renewMembership, type RenewResult } from "./actions";
 import { toast } from "sonner";
@@ -29,11 +30,6 @@ function formatLkr(n: number): string {
   return `LKR ${n.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
 }
 
-function firstNameOf(fullName: string): string {
-  const first = fullName.trim().split(/\s+/)[0] ?? fullName;
-  if (first.includes("@")) return "member";
-  return first;
-}
 
 export function RenewMembershipButton({
   memberId,
@@ -71,7 +67,7 @@ export function RenewMembershipButton({
 
   useEffect(() => {
     if (state?.ok) {
-      toast.success(`Renewed ${memberName}`);
+      toast.success(`Renewed ${displayName(memberName)}`);
       setOpen(false);
     } else if (state && !state.ok) {
       toast.error(state.error);
@@ -131,7 +127,7 @@ export function RenewMembershipButton({
               size="md"
             />
             <div className="min-w-0 flex-1">
-              <div className="font-medium truncate">{memberName}</div>
+              <div className="font-medium truncate">{displayName(memberName)}</div>
               <div className="text-xs text-muted-foreground flex flex-wrap gap-x-2 gap-y-0.5 mt-0.5">
                 {memberGymId !== null && memberGymId !== undefined && (
                   <span className="font-mono">#{memberGymId}</span>

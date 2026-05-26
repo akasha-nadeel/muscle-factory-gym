@@ -11,6 +11,7 @@ import { profiles } from "@/db/schema";
 import { MemberAvatar } from "@/components/admin/member-avatar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { firstNameOf } from "@/lib/profiles/display-name";
 
 // QR rotates every 5 minutes; allow a small grace for clock skew so members
 // who scan right at the rotation boundary don't get spurious expiries.
@@ -225,7 +226,7 @@ export default async function CheckinScanPage({
         />
         <div className="text-center space-y-1">
           <h1 className="text-xl font-semibold">
-            Welcome, {member.fullName.split(" ")[0]}!
+            Welcome, {firstNameOf(member.fullName)}!
           </h1>
           <p className="text-sm text-muted-foreground">
             Checked in at {format(new Date(), "HH:mm")} ·{" "}

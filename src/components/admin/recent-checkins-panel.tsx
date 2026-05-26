@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MemberAvatar } from "./member-avatar";
 import { EmptyState } from "./empty-state";
 import { Activity } from "lucide-react";
+import { displayName } from "@/lib/profiles/display-name";
 
 export type RecentCheckin = {
   id: string;
@@ -53,7 +54,7 @@ export function RecentCheckinsPanel({
                     href={`/admin/members/${c.memberId}`}
                     className="font-medium text-sm hover:underline truncate block"
                   >
-                    {c.memberName}
+                    {displayName(c.memberName)}
                   </Link>
                   <div className="text-xs text-muted-foreground">
                     {c.gymId !== null && (

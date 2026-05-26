@@ -8,6 +8,7 @@ import { getOutstandingBreakdown } from "@/lib/payments/outstanding-breakdown";
 import { AdminPage } from "@/components/admin/admin-page";
 import { MemberAvatar } from "@/components/admin/member-avatar";
 import { EmptyState } from "@/components/admin/empty-state";
+import { displayName } from "@/lib/profiles/display-name";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -106,7 +107,7 @@ export default async function OutstandingPage() {
                           {r.gymId ?? "—"}
                         </TableCell>
                         <TableCell className="font-medium">
-                          {r.fullName}
+                          {displayName(r.fullName)}
                         </TableCell>
                         <TableCell className="text-muted-foreground">
                           {r.planName}

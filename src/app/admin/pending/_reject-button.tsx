@@ -12,6 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { displayName } from "@/lib/profiles/display-name";
 import { rejectPendingMemberAction } from "./actions";
 
 export function RejectButton({
@@ -30,7 +31,7 @@ export function RejectButton({
     startTransition(async () => {
       const r = await rejectPendingMemberAction(memberId);
       if (r.ok) {
-        toast.success(`${memberName}'s sign-up was rejected`);
+        toast.success(`${displayName(memberName)}'s sign-up was rejected`);
         setOpen(false);
         // If the admin rejected from the member detail page, the current
         // URL now points at a deleted profile. Send them to the members
@@ -65,7 +66,7 @@ export function RejectButton({
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Reject {memberName}&apos;s sign-up?</DialogTitle>
+            <DialogTitle>Reject {displayName(memberName)}&apos;s sign-up?</DialogTitle>
             <DialogDescription>
               This deletes their account and removes them from your sign-up
               list. They can sign up again later if it was a mistake.

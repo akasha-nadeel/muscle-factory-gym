@@ -30,6 +30,7 @@ import {
 } from "@/lib/payments/next-due";
 import { parseISO } from "date-fns";
 import { signedWorkoutPlanUrl } from "@/lib/storage/supabase-storage";
+import { displayName } from "@/lib/profiles/display-name";
 
 export default async function PortalHome() {
   const me = await requireMemberProfile();
@@ -43,7 +44,7 @@ export default async function PortalHome() {
     return (
       <div className="min-h-[70vh] flex flex-col items-center justify-center text-center px-4">
         <p className="text-base sm:text-lg font-medium text-foreground/75 mb-4">
-          <span aria-hidden>👋</span> Welcome, {me.fullName}
+          <span aria-hidden>👋</span> Welcome, {displayName(me.fullName)}
         </p>
         <h1 className="text-3xl sm:text-5xl font-semibold tracking-tight max-w-2xl">
           Your account is awaiting approval
@@ -78,7 +79,7 @@ export default async function PortalHome() {
     return (
       <div className="min-h-[70vh] flex flex-col items-center justify-center text-center px-4">
         <p className="text-base sm:text-lg font-medium text-foreground/75 mb-4">
-          <span aria-hidden>👋</span> Welcome back, {me.fullName}
+          <span aria-hidden>👋</span> Welcome back, {displayName(me.fullName)}
         </p>
         <h1 className="text-3xl sm:text-5xl font-semibold tracking-tight max-w-2xl">
           Your membership is inactive
@@ -257,7 +258,7 @@ export default async function PortalHome() {
           <div className="min-w-0 flex-1 space-y-2 text-center sm:text-left">
             <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3">
               <h2 className="text-2xl font-semibold leading-tight break-words">
-                {me.fullName}
+                {displayName(me.fullName)}
               </h2>
               <StatusPill variant="active">active</StatusPill>
             </div>

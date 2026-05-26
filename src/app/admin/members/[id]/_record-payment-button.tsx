@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { MemberAvatar } from "@/components/admin/member-avatar";
 import { RecordPaymentForm } from "@/components/admin/record-payment-form";
+import { displayName } from "@/lib/profiles/display-name";
 
 export function RecordPaymentButton({
   memberId,
@@ -53,7 +54,7 @@ export function RecordPaymentButton({
               size="md"
             />
             <div className="min-w-0 flex-1">
-              <div className="font-medium truncate">{memberName}</div>
+              <div className="font-medium truncate">{displayName(memberName)}</div>
               <div className="text-xs text-muted-foreground flex flex-wrap gap-x-2 gap-y-0.5 mt-0.5">
                 {memberGymId !== null && memberGymId !== undefined && (
                   <span className="font-mono">#{memberGymId}</span>
@@ -66,7 +67,7 @@ export function RecordPaymentButton({
           <RecordPaymentForm
             memberId={memberId}
             currentMembershipId={currentMembershipId}
-            successToastName={memberName}
+            successToastName={displayName(memberName)}
             onSuccess={() => setOpen(false)}
             onCancel={() => setOpen(false)}
           />

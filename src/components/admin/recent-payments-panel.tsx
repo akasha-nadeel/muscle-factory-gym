@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
+import { displayName } from "@/lib/profiles/display-name";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusPill } from "./status-pill";
@@ -59,7 +60,7 @@ export function RecentPaymentsPanel({
                       href={`/admin/members/${p.memberId}`}
                       className="font-medium text-sm hover:underline truncate block"
                     >
-                      {p.memberName}
+                      {displayName(p.memberName)}
                     </Link>
                     <div className="text-xs text-muted-foreground">
                       {p.method.replace("_", " ")} ·{" "}

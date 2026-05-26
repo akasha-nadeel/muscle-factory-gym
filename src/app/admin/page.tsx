@@ -8,6 +8,7 @@ import { AdminPage } from "@/components/admin/admin-page";
 import { StatCard } from "@/components/admin/stat-card";
 import { Button } from "@/components/ui/button";
 import { RecordPaymentModal } from "@/components/admin/record-payment-modal";
+import { displayName } from "@/lib/profiles/display-name";
 import {
   RecentPaymentsPanel,
   type RecentPayment,
@@ -148,7 +149,7 @@ export default async function AdminHome({
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-semibold">Welcome, {admin.fullName}</h2>
+            <h2 className="text-2xl font-semibold">Welcome, {displayName(admin.fullName)}</h2>
             <p className="text-muted-foreground text-sm mt-1">
               Here&apos;s what&apos;s happening at the gym today.
             </p>

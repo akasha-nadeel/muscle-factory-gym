@@ -19,6 +19,7 @@ import { validatePaymentInput } from "@/lib/payments/validate";
 import { todayInSL } from "@/lib/tz";
 import { deleteWorkoutPlan } from "@/lib/storage/supabase-storage";
 import { isWiped } from "@/lib/profiles/wiped";
+import { displayName } from "@/lib/profiles/display-name";
 
 const WIPED_ACTION_ERROR =
   "This member has been removed. Financial history is retained but no new actions can be taken.";
@@ -52,7 +53,10 @@ export async function deleteMemberAction(
 
   if (isWiped(member)) return { ok: false, error: WIPED_ACTION_ERROR };
 
-  if (typedName.trim() !== member.fullName) {
+  // Compare against the displayed name (with the @domain stripped for
+  // email-as-fallback names). The admin types what they see, not the raw
+  // DB value.
+  if (typedName.trim() !== displayName(member.fullName)) {
     return { ok: false, error: "Typed name does not match member's name" };
   }
 

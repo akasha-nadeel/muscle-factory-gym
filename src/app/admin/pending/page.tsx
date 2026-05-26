@@ -11,6 +11,7 @@ import { RejectButton } from "./_reject-button";
 import { AdminPage } from "@/components/admin/admin-page";
 import { MemberAvatar } from "@/components/admin/member-avatar";
 import { EmptyState } from "@/components/admin/empty-state";
+import { displayName } from "@/lib/profiles/display-name";
 import { UserCheck } from "lucide-react";
 
 export default async function PendingPage() {
@@ -50,7 +51,7 @@ export default async function PendingPage() {
                   photoUrl={m.photoUrl}
                 />
                 <div className="flex-1 min-w-0">
-                  <div className="font-medium truncate">{m.fullName}</div>
+                  <div className="font-medium truncate">{displayName(m.fullName)}</div>
                   <div className="text-xs text-muted-foreground truncate">
                     {m.email}
                   </div>
@@ -94,7 +95,7 @@ export default async function PendingPage() {
                         photoUrl={m.photoUrl}
                       />
                     </TableCell>
-                    <TableCell className="font-medium">{m.fullName}</TableCell>
+                    <TableCell className="font-medium">{displayName(m.fullName)}</TableCell>
                     <TableCell>{m.email}</TableCell>
                     <TableCell>{format(m.createdAt, "PP")}</TableCell>
                     <TableCell className="text-right">
