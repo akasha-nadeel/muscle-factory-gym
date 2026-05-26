@@ -247,30 +247,40 @@ export default async function MembersPage({
           </>
           )}
         </div>
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 text-sm text-muted-foreground">
-          <span>
-            Showing {(page - 1) * PAGE_SIZE + 1}–
-            {Math.min(page * PAGE_SIZE, total)} of {total}
-          </span>
-          <div className="flex gap-2">
-            <Button
-              render={<Link href={pageHref(Math.max(1, page - 1))} />}
-              variant="outline"
-              size="sm"
-              disabled={page <= 1}
-            >
-              Previous
-            </Button>
-            <Button
-              render={<Link href={pageHref(Math.min(totalPages, page + 1))} />}
-              variant="outline"
-              size="sm"
-              disabled={page >= totalPages}
-            >
-              Next
-            </Button>
+        {total > 0 && (
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 text-sm text-muted-foreground">
+            <span>
+              {totalPages > 1
+                ? `Showing ${(page - 1) * PAGE_SIZE + 1}–${Math.min(page * PAGE_SIZE, total)} of ${total}`
+                : `${total} ${total === 1 ? "member" : "members"}`}
+            </span>
+            {/* Pagination only renders when there's more than one page —
+                disabled Previous/Next buttons on a single-page list are
+                noise. */}
+            {totalPages > 1 && (
+              <div className="flex gap-2">
+                <Button
+                  render={<Link href={pageHref(Math.max(1, page - 1))} />}
+                  variant="outline"
+                  size="sm"
+                  disabled={page <= 1}
+                >
+                  Previous
+                </Button>
+                <Button
+                  render={
+                    <Link href={pageHref(Math.min(totalPages, page + 1))} />
+                  }
+                  variant="outline"
+                  size="sm"
+                  disabled={page >= totalPages}
+                >
+                  Next
+                </Button>
+              </div>
+            )}
           </div>
-        </div>
+        )}
       </div>
     </AdminPage>
   );

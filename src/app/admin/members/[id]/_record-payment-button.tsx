@@ -8,13 +8,22 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { MemberAvatar } from "@/components/admin/member-avatar";
 import { RecordPaymentForm } from "@/components/admin/record-payment-form";
 
 export function RecordPaymentButton({
   memberId,
+  memberName,
+  memberPhotoUrl,
+  memberGymId,
+  memberPlanName,
   currentMembershipId,
 }: {
   memberId: string;
+  memberName: string;
+  memberPhotoUrl?: string | null;
+  memberGymId?: number | null;
+  memberPlanName?: string | null;
   currentMembershipId: string | null;
 }) {
   const [open, setOpen] = useState(false);
@@ -30,14 +39,36 @@ export function RecordPaymentButton({
         Record payment
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Record payment</DialogTitle>
           </DialogHeader>
+
+          {/* Recipient identity strip — matches the Send Workout Plan and
+              Approve Member dialogs so all three feel like one product. */}
+          <div className="flex items-center gap-3 rounded-md border bg-muted/30 px-3 py-2.5">
+            <MemberAvatar
+              fullName={memberName}
+              photoUrl={memberPhotoUrl ?? null}
+              size="md"
+            />
+            <div className="min-w-0 flex-1">
+              <div className="font-medium truncate">{memberName}</div>
+              <div className="text-xs text-muted-foreground flex flex-wrap gap-x-2 gap-y-0.5 mt-0.5">
+                {memberGymId !== null && memberGymId !== undefined && (
+                  <span className="font-mono">#{memberGymId}</span>
+                )}
+                {memberPlanName && <span>{memberPlanName}</span>}
+              </div>
+            </div>
+          </div>
+
           <RecordPaymentForm
             memberId={memberId}
             currentMembershipId={currentMembershipId}
+            successToastName={memberName}
             onSuccess={() => setOpen(false)}
+            onCancel={() => setOpen(false)}
           />
         </DialogContent>
       </Dialog>

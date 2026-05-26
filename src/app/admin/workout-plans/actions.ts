@@ -9,7 +9,6 @@ import {
   uploadWorkoutPlan,
   deleteWorkoutPlan,
 } from "@/lib/storage/supabase-storage";
-import { sendWorkoutPlanEmail } from "@/lib/email/send-workout-plan";
 import { validateWorkoutPlanFile } from "@/lib/workout-plans/validate";
 import { isWiped } from "@/lib/profiles/wiped";
 
@@ -95,13 +94,9 @@ export async function uploadWorkoutPlanAction(
     );
   }
 
-  if (member.email) {
-    await sendWorkoutPlanEmail({
-      toEmail: member.email,
-      memberName: member.fullName,
-      fileName: file.name,
-    });
-  }
+  // Email notification disabled — the member sees the new plan in their
+  // portal. To re-enable, restore the call to sendWorkoutPlanEmail from
+  // `@/lib/email/send-workout-plan` (the lib is still in the codebase).
 
   revalidatePath(`/admin/members/${memberId}`);
   revalidatePath("/portal");

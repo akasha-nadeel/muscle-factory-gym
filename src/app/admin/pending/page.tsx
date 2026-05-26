@@ -63,6 +63,9 @@ export default async function PendingPage() {
                   <ApproveButton
                     memberId={m.id}
                     memberName={m.fullName}
+                    memberEmail={m.email}
+                    memberPhotoUrl={m.photoUrl}
+                    memberCreatedAt={m.createdAt}
                     plans={activePlans}
                   />
                 </div>
@@ -103,6 +106,9 @@ export default async function PendingPage() {
                         <ApproveButton
                           memberId={m.id}
                           memberName={m.fullName}
+                          memberEmail={m.email}
+                          memberPhotoUrl={m.photoUrl}
+                          memberCreatedAt={m.createdAt}
                           plans={activePlans}
                         />
                       </div>

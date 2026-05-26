@@ -10,8 +10,8 @@
       "schedule": "0 19 * * *"
     },
     {
-      "path": "/api/cron/send-reminders",
-      "schedule": "30 1 * * *"
+      "path": "/api/cron/expire-workout-plans",
+      "schedule": "45 18 * * *"
     }
   ]
 }

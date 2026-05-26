@@ -137,6 +137,9 @@ export default async function PortalHome() {
     createdAt: Date;
     viewUrl: string;
     downloadUrl: string;
+    /** Whole days remaining until the expire-workout-plans cron deletes it.
+     * Negative means the cron just hasn't run yet (window has lapsed). */
+    daysUntilExpiry: number;
   } | null = null;
   if (planRow) {
     try {
@@ -146,11 +149,18 @@ export default async function PortalHome() {
           downloadAs: planRow.fileName,
         }),
       ]);
+      // Workout plans live for 5 days from upload. Ceil so a plan uploaded
+      // 4 days 1 hour ago shows "Expires in 1 day", not "Expires today".
+      const FIVE_DAYS_MS = 5 * 24 * 60 * 60 * 1000;
+      const ageMs = Date.now() - planRow.createdAt.getTime();
+      const remainingMs = FIVE_DAYS_MS - ageMs;
+      const daysUntilExpiry = Math.ceil(remainingMs / (24 * 60 * 60 * 1000));
       workoutPlanView = {
         fileName: planRow.fileName,
         createdAt: planRow.createdAt,
         viewUrl,
         downloadUrl,
+        daysUntilExpiry,
       };
     } catch (err) {
       console.warn(`[portal] failed to sign workout plan URL: ${String(err)}`);
@@ -329,31 +339,62 @@ export default async function PortalHome() {
                 <div className="text-xs text-muted-foreground mt-0.5">
                   Uploaded {format(workoutPlanView.createdAt, "PP")}
                 </div>
-              </div>
-              <div className="flex gap-2 shrink-0">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  render={
-                    <a
-                      href={workoutPlanView.viewUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    />
+                {(() => {
+                  const d = workoutPlanView.daysUntilExpiry;
+                  if (d < 0) {
+                    return (
+                      <div className="text-xs text-muted-foreground mt-0.5">
+                        Expired — ask your trainer to resend.
+                      </div>
+                    );
                   }
-                >
-                  <Eye className="size-4" />
-                  <span className="hidden sm:inline">View</span>
-                </Button>
-                <Button
-                  size="sm"
-                  className="bg-emerald-500 hover:bg-emerald-600 text-white"
-                  render={<a href={workoutPlanView.downloadUrl} />}
-                >
-                  <Download className="size-4" />
-                  <span className="hidden sm:inline">Download</span>
-                </Button>
+                  if (d === 0) {
+                    return (
+                      <div className="text-xs font-medium text-amber-600 dark:text-amber-400 mt-0.5">
+                        Expires today — download now
+                      </div>
+                    );
+                  }
+                  if (d === 1) {
+                    return (
+                      <div className="text-xs font-medium text-amber-600 dark:text-amber-400 mt-0.5">
+                        Expires tomorrow
+                      </div>
+                    );
+                  }
+                  return (
+                    <div className="text-xs text-muted-foreground mt-0.5">
+                      Expires in {d} days
+                    </div>
+                  );
+                })()}
               </div>
+              {workoutPlanView.daysUntilExpiry >= 0 && (
+                <div className="flex gap-2 shrink-0">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    render={
+                      <a
+                        href={workoutPlanView.viewUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      />
+                    }
+                  >
+                    <Eye className="size-4" />
+                    <span className="hidden sm:inline">View</span>
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="bg-emerald-500 hover:bg-emerald-600 text-white"
+                    render={<a href={workoutPlanView.downloadUrl} />}
+                  >
+                    <Download className="size-4" />
+                    <span className="hidden sm:inline">Download</span>
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

@@ -28,6 +28,7 @@ import { PaymentsTable } from "./_payments-table";
 import { RecordPaymentButton } from "./_record-payment-button";
 import { AttendanceTable } from "./_attendance-table";
 import { SendWorkoutPlanButton } from "./_send-workout-plan-button";
+import { RenewMembershipButton } from "./_renew-button";
 import { DeleteMemberButton } from "./_delete-member-button";
 import { GymIdCopy } from "@/components/admin/gym-id-copy";
 import { ApproveButton } from "@/app/admin/pending/_approve-button";
@@ -150,6 +151,9 @@ export default async function MemberDetailPage({
               <ApproveButton
                 memberId={member.id}
                 memberName={member.fullName}
+                memberEmail={member.email}
+                memberPhotoUrl={avatarUrl}
+                memberCreatedAt={member.createdAt}
                 plans={activePlans}
               />
             </div>
@@ -175,6 +179,39 @@ export default async function MemberDetailPage({
 
   const today = todayInSL();
   const current = getCurrentMembership(history, today);
+
+  // Renewal eligibility — shown only when the member needs (or will soon
+  // need) a new membership. Hidden mid-cycle to avoid noise.
+  const RENEWAL_HEADS_UP_DAYS = 14;
+  const daysUntilExpiry = current
+    ? Math.ceil(
+        (parseISO(current.endDate).getTime() - parseISO(today).getTime()) /
+          (24 * 60 * 60 * 1000),
+      )
+    : null;
+  const renewalUrgency: "expired" | "ending-soon" | null =
+    !wiped && member.status === "active"
+      ? current === null
+        ? "expired"
+        : daysUntilExpiry !== null && daysUntilExpiry <= RENEWAL_HEADS_UP_DAYS
+          ? "ending-soon"
+          : null
+      : null;
+  // Latest membership across all statuses — used for the dialog header
+  // ("Monthly expired Jun 22") and to drive the start-date math server-side.
+  const latestHistoryEntry = history[0] ?? null;
+  // Only fetch active plans when the button might render.
+  const renewPlans = renewalUrgency
+    ? await db
+        .select({
+          id: plans.id,
+          name: plans.name,
+          durationDays: plans.durationDays,
+          priceLkr: plans.priceLkr,
+        })
+        .from(plans)
+        .where(eq(plans.isActive, true))
+    : [];
 
   const paymentRows = await db
     .select()
@@ -272,12 +309,34 @@ export default async function MemberDetailPage({
               <GymIdCopy gymId={member.gymId} />
             </div>
           )}
-          {/* Send workout plan: bottom-right of hero on sm+, full-width on mobile */}
+          {/* Hero action buttons (sm+): Renew sits left of Send Workout
+              Plan so a returning member's workflow flows left-to-right. */}
           {!wiped && (
-            <div className="hidden sm:block absolute bottom-4 right-4">
+            <div className="hidden sm:flex absolute bottom-4 right-4 gap-2">
+              {renewalUrgency && (
+                <RenewMembershipButton
+                  memberId={member.id}
+                  memberName={member.fullName}
+                  memberPhotoUrl={avatarUrl}
+                  memberGymId={member.gymId}
+                  currentPlanName={
+                    current?.planName ?? latestHistoryEntry?.planName ?? null
+                  }
+                  currentEndDate={
+                    current?.endDate ??
+                    latestHistoryEntry?.endDate ??
+                    null
+                  }
+                  urgency={renewalUrgency}
+                  plans={renewPlans}
+                />
+              )}
               <SendWorkoutPlanButton
                 memberId={member.id}
                 memberName={member.fullName}
+                memberPhotoUrl={avatarUrl}
+                memberGymId={member.gymId}
+                memberPlanName={current?.planName ?? null}
                 currentPlan={currentWorkoutPlan ?? null}
               />
             </div>
@@ -324,17 +383,36 @@ export default async function MemberDetailPage({
               </div>
             </div>
           </div>
-          {/* Mobile: gym id copy + full-width button below the hero info */}
+          {/* Mobile: gym id copy + full-width buttons stacked below hero */}
           <div className="sm:hidden mt-4 space-y-3">
             {member.gymId !== null && (
               <div className="flex justify-center">
                 <GymIdCopy gymId={member.gymId} />
               </div>
             )}
+            {!wiped && renewalUrgency && (
+              <RenewMembershipButton
+                memberId={member.id}
+                memberName={member.fullName}
+                memberPhotoUrl={avatarUrl}
+                memberGymId={member.gymId}
+                currentPlanName={
+                  current?.planName ?? latestHistoryEntry?.planName ?? null
+                }
+                currentEndDate={
+                  current?.endDate ?? latestHistoryEntry?.endDate ?? null
+                }
+                urgency={renewalUrgency}
+                plans={renewPlans}
+              />
+            )}
             {!wiped && (
               <SendWorkoutPlanButton
                 memberId={member.id}
                 memberName={member.fullName}
+                memberPhotoUrl={avatarUrl}
+                memberGymId={member.gymId}
+                memberPlanName={current?.planName ?? null}
                 currentPlan={currentWorkoutPlan ?? null}
               />
             )}
@@ -390,6 +468,10 @@ export default async function MemberDetailPage({
             {!wiped && (
               <RecordPaymentButton
                 memberId={member.id}
+                memberName={member.fullName}
+                memberPhotoUrl={avatarUrl}
+                memberGymId={member.gymId}
+                memberPlanName={current?.planName ?? null}
                 currentMembershipId={current?.id ?? null}
               />
             )}

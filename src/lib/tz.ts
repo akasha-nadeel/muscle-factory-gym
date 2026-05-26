@@ -64,3 +64,30 @@ export function formatSLDate(d: Date): string {
 export function formatSLTime(d: Date): string {
   return SL_TIME_FMT.format(d);
 }
+
+/** YYYY-01-01 of the current SL year — used for year-to-date filters. */
+export function startOfSLYear(todaySL: string = todayInSL()): string {
+  return `${todaySL.slice(0, 4)}-01-01`;
+}
+
+/** YYYY-MM-DD of the SL date N months before `todaySL`. Day stays the same;
+ * date-fns-style end-of-month clamping isn't needed because we only feed
+ * the result back into a string comparison on YYYY-MM, not a calendar walk. */
+export function slDateMonthsAgo(
+  monthsAgo: number,
+  todaySL: string = todayInSL(),
+): string {
+  const [y, m, d] = todaySL.split("-").map(Number);
+  // 0-indexed month math; Date wraps year automatically when m goes negative.
+  const dt = new Date(Date.UTC(y, m - 1 - monthsAgo, d));
+  const yyyy = dt.getUTCFullYear();
+  const mm = String(dt.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(dt.getUTCDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+/** Convert a SL-local YYYY-MM-DD to the UTC instant of that day's 00:00 SL
+ * time. Use this when filtering a `timestamptz` column in SQL. */
+export function slDateToUTC(slDate: string): Date {
+  return new Date(`${slDate}T00:00:00+05:30`);
+}
