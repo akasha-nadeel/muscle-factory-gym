@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { currentUser } from "@clerk/nextjs/server";
 import { db } from "@/db";
 import { profiles, payments, attendance } from "@/db/schema";
 import { and, eq, gte, lt, desc, sql } from "drizzle-orm";
@@ -62,6 +63,18 @@ export default async function AdminHome({
   const sp = await searchParams;
   const range = parseRange(sp.range);
   const today = todayInSL();
+
+  // Greeting name comes from Clerk (always live) rather than profiles.full_name
+  // (which can drift if the user updates their Clerk profile while the
+  // webhook can't reach the app — e.g. on localhost dev). Falls back to
+  // the DB value when Clerk doesn't return a user (rare — sign-out racing
+  // the page render).
+  const clerkUser = await currentUser().catch(() => null);
+  const greetingName =
+    [clerkUser?.firstName, clerkUser?.lastName]
+      .filter(Boolean)
+      .join(" ")
+      .trim() || displayName(admin.fullName);
   const monthStart = startOfMonthSL(today);
   const monthEnd = startOfNextMonthSL(today);
   const recentRangeStart = rangeStartSL(today, range);
@@ -149,7 +162,7 @@ export default async function AdminHome({
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-semibold">Welcome, {displayName(admin.fullName)}</h2>
+            <h2 className="text-2xl font-semibold">Welcome, {greetingName}</h2>
             <p className="text-muted-foreground text-sm mt-1">
               Here&apos;s what&apos;s happening at the gym today.
             </p>

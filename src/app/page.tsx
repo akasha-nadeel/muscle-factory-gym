@@ -87,18 +87,11 @@ export default async function Home() {
           </div>
         </section>
 
-        {/* Footer */}
-        <footer className="border-t mt-16">
-          <div className="max-w-6xl mx-auto px-4 md:px-6 py-8 text-sm text-muted-foreground flex flex-col md:flex-row items-center justify-between gap-2">
-            <div>© Muscle Factory Gym</div>
-            <div className="flex gap-4">
-              <Link href="/sign-in" className="hover:text-foreground">
-                Sign in
-              </Link>
-              <Link href="/sign-up" className="hover:text-foreground">
-                Sign up
-              </Link>
-            </div>
+        {/* Footer — single-line, centered on all screen sizes. */}
+        <footer className="border-t mt-12 sm:mt-16">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 py-5 sm:py-6 text-xs sm:text-sm text-muted-foreground text-center">
+            © {new Date().getFullYear()} Muscle Factory Gym. All rights
+            reserved.
           </div>
         </footer>
       </main>
