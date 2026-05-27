@@ -29,6 +29,7 @@ import { RecordPaymentButton } from "./_record-payment-button";
 import { AttendanceTable } from "./_attendance-table";
 import { SendWorkoutPlanButton } from "./_send-workout-plan-button";
 import { RenewMembershipButton } from "./_renew-button";
+import { CancelMembershipButton } from "./_cancel-membership-button";
 import { DeleteMemberButton } from "./_delete-member-button";
 import { GymIdCopy } from "@/components/admin/gym-id-copy";
 import { ApproveButton } from "@/app/admin/pending/_approve-button";
@@ -497,7 +498,7 @@ export default async function MemberDetailPage({
               <EmptyState icon={Calendar} title="No memberships yet" />
             </div>
           ) : (
-          <div className="rounded-lg border bg-card">
+          <div className="rounded-lg border bg-card overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -505,6 +506,7 @@ export default async function MemberDetailPage({
                   <TableHead>Start</TableHead>
                   <TableHead>End</TableHead>
                   <TableHead className="w-32">Status</TableHead>
+                  <TableHead className="w-28 text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -517,6 +519,20 @@ export default async function MemberDetailPage({
                     <TableCell>{format(new Date(h.endDate), "PP")}</TableCell>
                     <TableCell>
                       <StatusPill variant={h.status}>{h.status}</StatusPill>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {/* Cancel button only on still-active rows. Expired
+                          and cancelled rows show a dash (no action). */}
+                      {h.status === "active" && !wiped ? (
+                        <CancelMembershipButton
+                          memberId={member.id}
+                          membershipId={h.id}
+                        />
+                      ) : (
+                        <span className="text-muted-foreground text-xs">
+                          —
+                        </span>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}

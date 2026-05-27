@@ -104,6 +104,70 @@ export async function deleteMemberAction(
   return { ok: true };
 }
 
+// -------------------- Cancel membership ----------------------------------
+
+export type CancelMembershipResult =
+  | { ok: true }
+  | { ok: false; error: string };
+
+/**
+ * Manually cancel an active membership. Sets status='cancelled' on the row.
+ * The member's history stays intact; they just can't check in until they
+ * renew. Used as the undo path for an accidentally-approved membership
+ * (admin cancels the just-created row + refunds the just-recorded payment).
+ *
+ * Idempotent: a non-active row is left alone with a friendly error.
+ */
+export async function _cancelMembershipUnsafe(input: {
+  membershipId: string;
+  memberId: string;
+}): Promise<CancelMembershipResult> {
+  const [row] = await db
+    .select({ id: memberships.id, status: memberships.status, memberId: memberships.memberId })
+    .from(memberships)
+    .where(eq(memberships.id, input.membershipId))
+    .limit(1);
+  if (!row) return { ok: false, error: "Membership not found" };
+  if (row.memberId !== input.memberId) {
+    return { ok: false, error: "Membership does not belong to this member" };
+  }
+  if (row.status !== "active") {
+    return {
+      ok: false,
+      error: `Already ${row.status} — only active memberships can be cancelled.`,
+    };
+  }
+  await db
+    .update(memberships)
+    .set({ status: "cancelled" })
+    .where(eq(memberships.id, input.membershipId));
+  return { ok: true };
+}
+
+export async function cancelMembership(
+  memberId: string,
+  membershipId: string,
+): Promise<CancelMembershipResult> {
+  const admin = await requireAdminProfile();
+  // Defensive: even with admin auth, refuse to cancel for a wiped profile.
+  const [member] = await db
+    .select({ clerkUserId: profiles.clerkUserId })
+    .from(profiles)
+    .where(eq(profiles.id, memberId))
+    .limit(1);
+  if (!member) return { ok: false, error: "Member not found" };
+  if (isWiped(member)) return { ok: false, error: WIPED_ACTION_ERROR };
+  void admin;
+
+  const result = await _cancelMembershipUnsafe({ membershipId, memberId });
+  if (result.ok) {
+    revalidatePath("/admin");
+    revalidatePath(`/admin/members/${memberId}`);
+    revalidatePath("/portal");
+  }
+  return result;
+}
+
 // -------------------- Renew membership -----------------------------------
 
 export type RenewPaymentInput = {

@@ -4,6 +4,7 @@ import { useActionState, useEffect, useState } from "react";
 import { Loader2, RotateCcw } from "lucide-react";
 import {
   recordPayment,
+  undoRecentPayment,
   type PaymentActionResult,
 } from "@/app/admin/payments/actions";
 import { Button } from "@/components/ui/button";
@@ -96,10 +97,32 @@ export function RecordPaymentForm({
 
   useEffect(() => {
     if (state?.ok) {
+      // Capture the just-created paymentId for the Undo action. When
+      // present, the success toast offers a 10-second window to delete
+      // the row outright (handles "I clicked Record on the wrong amount /
+      // wrong member" mistakes). After that, the regular Refund flow
+      // takes over.
+      const paymentId = state.paymentId;
       toast.success(
         successToastName
           ? `Payment recorded for ${successToastName}`
           : "Payment recorded",
+        paymentId
+          ? {
+              duration: 10_000,
+              action: {
+                label: "Undo",
+                onClick: async () => {
+                  const r = await undoRecentPayment(paymentId);
+                  if (r.ok) {
+                    toast.success("Payment undone");
+                  } else if (!r.ok) {
+                    toast.error(r.error);
+                  }
+                },
+              },
+            }
+          : undefined,
       );
       onSuccess?.();
     } else if (state && !state.ok && state.error) {

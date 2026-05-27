@@ -23,7 +23,7 @@ export type RecordPaymentInput = {
 } & PaymentInput;
 
 export type PaymentActionResult =
-  | { ok: true }
+  | { ok: true; paymentId?: string }
   | { ok: false; errors?: Partial<Record<keyof PaymentInput, string>>; error?: string };
 
 /** Test-only helper: no auth gate. */
@@ -60,18 +60,21 @@ export async function _recordPaymentUnsafe(
     }
   }
 
-  await db.insert(payments).values({
-    memberId: input.memberId,
-    membershipId: input.membershipId,
-    amountLkr: v.value.amountLkr,
-    method: v.value.method,
-    kind: v.value.kind,
-    status: "succeeded",
-    reference: v.value.reference,
-    notes: v.value.notes,
-    recordedBy: input.recordedByProfileId,
-  });
-  return { ok: true };
+  const [inserted] = await db
+    .insert(payments)
+    .values({
+      memberId: input.memberId,
+      membershipId: input.membershipId,
+      amountLkr: v.value.amountLkr,
+      method: v.value.method,
+      kind: v.value.kind,
+      status: "succeeded",
+      reference: v.value.reference,
+      notes: v.value.notes,
+      recordedBy: input.recordedByProfileId,
+    })
+    .returning({ id: payments.id });
+  return { ok: true, paymentId: inserted.id };
 }
 
 export type RefundInput = {
@@ -182,4 +185,52 @@ export async function refundPayment(
     revalidatePath("/portal");
   }
   return result;
+}
+
+// -------------------- Undo (within 5 min of recording) -------------------
+
+const UNDO_WINDOW_MS = 5 * 60 * 1000;
+
+/**
+ * Hard-delete a just-recorded payment, used as the "Undo" action on the
+ * Record Payment success toast. Unlike a refund, this removes the row
+ * outright — cleaner for what is genuinely a 10-second click correction,
+ * not an accounting event. Gated to a 5-minute window so it can't be used
+ * to retroactively rewrite history.
+ *
+ * Outside the window the admin uses the regular Refund flow.
+ */
+export async function undoRecentPayment(
+  paymentId: string,
+): Promise<PaymentActionResult> {
+  await requireAdminProfile();
+  const [row] = await db
+    .select({
+      id: payments.id,
+      createdAt: payments.createdAt,
+      status: payments.status,
+    })
+    .from(payments)
+    .where(eq(payments.id, paymentId))
+    .limit(1);
+  if (!row) return { ok: false, error: "Payment not found" };
+  if (row.status !== "succeeded") {
+    return {
+      ok: false,
+      error: "Only freshly-recorded payments can be undone. Use Refund instead.",
+    };
+  }
+  const ageMs = Date.now() - row.createdAt.getTime();
+  if (ageMs > UNDO_WINDOW_MS) {
+    return {
+      ok: false,
+      error: "Undo window has expired. Use the Refund button on the payment row instead.",
+    };
+  }
+  await db.delete(payments).where(eq(payments.id, paymentId));
+  revalidatePath("/admin");
+  revalidatePath("/admin/members");
+  revalidatePath("/admin/reports");
+  revalidatePath("/portal");
+  return { ok: true };
 }
