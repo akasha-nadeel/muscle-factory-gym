@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { Loader2, RotateCcw } from "lucide-react";
 import {
   recordPayment,
@@ -95,8 +95,17 @@ export function RecordPaymentForm({
     FormData
   >(action, undefined);
 
+  // Guard so the success/error toast fires exactly once per state object.
+  // Without this, a parent re-render (triggered by onSuccess() closing
+  // the dialog) creates a new onSuccess function reference → effect deps
+  // change → effect re-runs → duplicate toast on screen.
+  const handledStateRef = useRef<PaymentActionResult | undefined>(undefined);
+
   useEffect(() => {
-    if (state?.ok) {
+    if (!state || handledStateRef.current === state) return;
+    handledStateRef.current = state;
+
+    if (state.ok) {
       // Capture the just-created paymentId for the Undo action. When
       // present, the success toast offers a 10-second window to delete
       // the row outright (handles "I clicked Record on the wrong amount /
@@ -125,7 +134,7 @@ export function RecordPaymentForm({
           : undefined,
       );
       onSuccess?.();
-    } else if (state && !state.ok && state.error) {
+    } else if (state.error) {
       toast.error(state.error);
     }
   }, [state, successToastName, onSuccess]);
