@@ -21,6 +21,7 @@ import {
 import { AdminPage } from "@/components/admin/admin-page";
 import { EmptyState } from "@/components/admin/empty-state";
 import { StatCard } from "@/components/admin/stat-card";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   ArrowDownRight,
@@ -28,7 +29,6 @@ import {
   BarChart3,
   Calendar,
   Download,
-  Minus,
   RotateCcw,
   Wallet,
 } from "lucide-react";
@@ -80,12 +80,11 @@ function previousPeriodWindow(
   };
 }
 
-function fmtLkrShort(n: number): string {
-  const sign = n < 0 ? "-" : "";
-  const abs = Math.abs(n);
-  if (abs >= 1_000_000) return `${sign}LKR ${(abs / 1_000_000).toFixed(1)}M`;
-  if (abs >= 1_000) return `${sign}LKR ${(abs / 1_000).toFixed(1)}K`;
-  return `${sign}LKR ${abs.toLocaleString()}`;
+/** Full-precision LKR with thousand-separators. StatCard auto-shrinks
+ * the font when the string is long so a 6-figure value still fits on
+ * one line — see src/components/admin/stat-card.tsx::valueFontSize. */
+function fmtLkr(n: number): string {
+  return `LKR ${n.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
 }
 
 function fmtNum(n: number): string {
@@ -229,25 +228,59 @@ export default async function ReportsPage({
           </div>
         ) : (
           <>
-            {/* KPI tiles */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <StatCard
-                icon={Wallet}
-                label="Net revenue"
-                value={fmtLkrShort(net)}
-                caption={periodLabel[period]}
-                accentColor="blue"
-              />
-              <ChangeStat
-                hasPrev={hasPrev}
-                changePct={changePct}
-                prevNet={prevNet}
-                period={period}
-              />
+            {/* Net revenue hero — same pattern as the admin dashboard
+                Total Revenue panel. Headline gets full real-estate;
+                trend pill on the right shows direction vs the previous
+                period. Period label echoes the chosen tab. */}
+            <div className="rounded-2xl border bg-gradient-to-br from-sky-500/10 via-card to-card p-5 sm:p-6">
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="size-11 rounded-xl bg-sky-500/20 text-sky-500 flex items-center justify-center shrink-0">
+                    <Wallet className="size-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-xs uppercase tracking-wide text-muted-foreground">
+                      Net revenue · {periodLabel[period]}
+                    </div>
+                    <div className="text-3xl sm:text-4xl font-semibold tabular-nums mt-1 whitespace-nowrap">
+                      {fmtLkr(net)}
+                    </div>
+                  </div>
+                </div>
+                {hasPrev && period !== "all" && (
+                  <div className="flex flex-col items-start sm:items-end gap-2 shrink-0">
+                    <span
+                      className={cn(
+                        "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium tabular-nums",
+                        changePct >= 0
+                          ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
+                          : "bg-amber-500/15 text-amber-700 dark:text-amber-400",
+                      )}
+                    >
+                      {changePct >= 0 ? (
+                        <ArrowUpRight className="size-3.5" />
+                      ) : (
+                        <ArrowDownRight className="size-3.5" />
+                      )}
+                      {changePct >= 0 ? "+" : ""}
+                      {changePct.toFixed(1)}% vs previous period
+                    </span>
+                    <span className="text-xs text-muted-foreground tabular-nums">
+                      Previous: {fmtLkr(prevNet)}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Supporting metrics — three equal-weight cards now that
+                revenue has its own hero. Same density as the admin
+                dashboard's operational row. */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <StatCard
                 icon={RotateCcw}
                 label="Refunds"
-                value={fmtLkrShort(totalRefunds)}
+                value={fmtLkr(totalRefunds)}
                 caption={
                   refundCount === 0
                     ? "No refunds issued"
@@ -258,12 +291,25 @@ export default async function ReportsPage({
               <StatCard
                 icon={Calendar}
                 label="Monthly average"
-                value={fmtLkrShort(monthlyAvg)}
+                value={fmtLkr(monthlyAvg)}
                 caption={
                   monthCount === 1
                     ? "1 month with activity"
                     : `${monthCount} months with activity`
                 }
+                accentColor="default"
+              />
+              <StatCard
+                icon={BarChart3}
+                label="Months with activity"
+                value={monthCount}
+                caption={`out of ${
+                  period === "12mo"
+                    ? 12
+                    : period === "ytd"
+                      ? new Date().getMonth() + 1
+                      : monthCount
+                }`}
                 accentColor="default"
               />
             </div>
@@ -390,44 +436,3 @@ export default async function ReportsPage({
   );
 }
 
-function ChangeStat({
-  hasPrev,
-  changePct,
-  prevNet,
-  period,
-}: {
-  hasPrev: boolean;
-  changePct: number;
-  prevNet: number;
-  period: ReportsPeriod;
-}) {
-  if (period === "all" || !hasPrev) {
-    return (
-      <StatCard
-        icon={Minus}
-        label="vs previous"
-        value="—"
-        caption={
-          period === "all"
-            ? "Not applicable for all time"
-            : "No prior period data"
-        }
-        accentColor="default"
-      />
-    );
-  }
-  const up = changePct >= 0;
-  const Icon = up ? ArrowUpRight : ArrowDownRight;
-  // Color: emerald when positive, amber when negative. Avoid red here
-  // because the brand primary is red and we want this to read as info
-  // not as a system error.
-  return (
-    <StatCard
-      icon={Icon}
-      label="vs previous period"
-      value={`${up ? "+" : ""}${changePct.toFixed(1)}%`}
-      caption={`Previous: LKR ${Math.round(prevNet).toLocaleString()}`}
-      accentColor={up ? "green" : "amber"}
-    />
-  );
-}
