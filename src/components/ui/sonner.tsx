@@ -34,6 +34,19 @@ const Toaster = ({ ...props }: ToasterProps) => {
           "--normal-text": "var(--popover-foreground)",
           "--normal-border": "var(--border)",
           "--border-radius": "var(--radius)",
+          // Solid emerald success toast with white text in BOTH themes —
+          // matches the design language elsewhere in the admin (the Approve
+          // and Renew CTAs are also emerald). Without these, sonner's dark
+          // theme renders success as a muted dark surface with a green
+          // accent, which reads as "info" rather than "success" at a glance.
+          "--success-bg": "#059669",
+          "--success-text": "#ffffff",
+          "--success-border": "#047857",
+          // Match for the error toast — solid destructive with white text,
+          // visible at a glance in either theme.
+          "--error-bg": "#dc2626",
+          "--error-text": "#ffffff",
+          "--error-border": "#b91c1c",
         } as React.CSSProperties
       }
       toastOptions={{
