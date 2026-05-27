@@ -4,7 +4,15 @@ import { db } from "@/db";
 import { profiles, payments, attendance } from "@/db/schema";
 import { and, eq, gte, lt, desc, sql } from "drizzle-orm";
 import { requireAdminProfile } from "@/lib/auth";
-import { Wallet, Users, UserPlus, AlertCircle } from "lucide-react";
+import {
+  Wallet,
+  Users,
+  UserPlus,
+  AlertCircle,
+  ArrowUpRight,
+  ArrowDownRight,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
 import { AdminPage } from "@/components/admin/admin-page";
 import { StatCard } from "@/components/admin/stat-card";
 import { Button } from "@/components/ui/button";
@@ -31,6 +39,13 @@ function startOfNextMonthSL(todaySL: string): string {
   return `${y}-${String(m + 1).padStart(2, "0")}-01`;
 }
 
+/** Start of the calendar month before the given YYYY-MM-01 date. */
+function prevMonthOf(yyyymmdd: string): string {
+  const [y, m] = yyyymmdd.split("-").map(Number);
+  if (m === 1) return `${y - 1}-12-01`;
+  return `${y}-${String(m - 1).padStart(2, "0")}-01`;
+}
+
 /**
  * Range start (SL midnight) for the "Today/Week/Month" filter on the
  * Recent panels. UTC interpretation is a 5h30m shift earlier — we pass the
@@ -52,6 +67,15 @@ function rangeStartSL(todaySL: string, range: RangeKey): Date {
 
 function parseRange(raw: string | undefined): RangeKey {
   return raw === "week" || raw === "month" ? raw : "today";
+}
+
+/**
+ * Full-precision LKR with thousand-separators. Used on the dashboard
+ * KPI cards — StatCard auto-shrinks the font when the string is long
+ * so a 6-figure value still fits on one line.
+ */
+function formatLkrFull(n: number): string {
+  return `LKR ${n.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
 }
 
 export default async function AdminHome({
@@ -77,6 +101,9 @@ export default async function AdminHome({
       .trim() || displayName(admin.fullName);
   const monthStart = startOfMonthSL(today);
   const monthEnd = startOfNextMonthSL(today);
+  // Previous month's window — used for the revenue-trend comparison on
+  // the hero panel ("LKR X this month  ↑ N% vs last month").
+  const prevMonthStart = prevMonthOf(monthStart);
   const recentRangeStart = rangeStartSL(today, range);
 
   // Cycle-aware outstanding total — uses the same helper as /admin/outstanding
@@ -85,6 +112,7 @@ export default async function AdminHome({
 
   const [
     revenueRow,
+    prevRevenueRow,
     activeRow,
     pendingRow,
     outstandingRowsResolved,
@@ -99,6 +127,16 @@ export default async function AdminHome({
           eq(payments.status, "succeeded"),
           gte(payments.paidAt, new Date(`${monthStart}T00:00:00Z`)),
           lt(payments.paidAt, new Date(`${monthEnd}T00:00:00Z`)),
+        ),
+      ),
+    db
+      .select({ total: sql<string | null>`sum(${payments.amountLkr})` })
+      .from(payments)
+      .where(
+        and(
+          eq(payments.status, "succeeded"),
+          gte(payments.paidAt, new Date(`${prevMonthStart}T00:00:00Z`)),
+          lt(payments.paidAt, new Date(`${monthStart}T00:00:00Z`)),
         ),
       ),
     db
@@ -149,8 +187,11 @@ export default async function AdminHome({
   ]);
 
   const revenue = Number(revenueRow[0]?.total ?? 0);
+  const prevRevenue = Number(prevRevenueRow[0]?.total ?? 0);
   const activeCount = Number(activeRow[0]?.count ?? 0);
   const pendingCount = Number(pendingRow[0]?.count ?? 0);
+  const revenueDeltaPct =
+    prevRevenue > 0 ? ((revenue - prevRevenue) / prevRevenue) * 100 : null;
 
   const outstandingTotal = outstandingRowsResolved.reduce(
     (sum, r) => sum + Number(r.outstandingLkr),
@@ -198,14 +239,60 @@ export default async function AdminHome({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard
-            icon={Wallet}
-            label="Total revenue"
-            value={`LKR ${revenue.toLocaleString()}`}
-            caption="This month"
-            accentColor="blue"
-          />
+        {/* Revenue hero panel — promoted out of the small-card row because
+            it's the gym owner's most-asked metric. Headline number gets
+            full real estate; trend pill gives one-glance context vs the
+            previous month; "View Reports →" makes the connection to the
+            full reports page obvious. */}
+        <div className="rounded-2xl border bg-gradient-to-br from-sky-500/10 via-card to-card p-5 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="size-11 rounded-xl bg-sky-500/20 text-sky-500 flex items-center justify-center shrink-0">
+                <Wallet className="size-5" />
+              </div>
+              <div>
+                <div className="text-xs uppercase tracking-wide text-muted-foreground">
+                  Total revenue · This month
+                </div>
+                <div className="text-3xl sm:text-4xl font-semibold tabular-nums mt-1 whitespace-nowrap">
+                  {formatLkrFull(revenue)}
+                </div>
+              </div>
+            </div>
+            <div className="flex flex-col items-start sm:items-end gap-2 shrink-0">
+              {revenueDeltaPct !== null && (
+                <span
+                  className={cn(
+                    "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium tabular-nums",
+                    revenueDeltaPct >= 0
+                      ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
+                      : "bg-amber-500/15 text-amber-700 dark:text-amber-400",
+                  )}
+                >
+                  {revenueDeltaPct >= 0 ? (
+                    <ArrowUpRight className="size-3.5" />
+                  ) : (
+                    <ArrowDownRight className="size-3.5" />
+                  )}
+                  {revenueDeltaPct >= 0 ? "+" : ""}
+                  {revenueDeltaPct.toFixed(1)}% vs last month
+                </span>
+              )}
+              <Link
+                href="/admin/reports"
+                className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
+              >
+                View in Reports
+                <ArrowUpRight className="size-3.5" />
+              </Link>
+            </div>
+          </div>
+        </div>
+
+        {/* Operational counts — these answer "do I need to act?" Three
+            equal-weight cards is the right density now that revenue has
+            its own hero. */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <StatCard
             icon={Users}
             label="Active members"
@@ -228,7 +315,7 @@ export default async function AdminHome({
             <StatCard
               icon={AlertCircle}
               label="Outstanding dues"
-              value={`LKR ${outstandingTotal.toLocaleString()}`}
+              value={formatLkrFull(outstandingTotal)}
               caption={
                 outstandingTotal > 0
                   ? "Click for breakdown →"

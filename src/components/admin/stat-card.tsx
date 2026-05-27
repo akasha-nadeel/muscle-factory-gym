@@ -4,6 +4,20 @@ import type { LucideIcon } from "lucide-react";
 export type StatCardAccent = "red" | "green" | "amber" | "blue" | "default";
 
 /**
+ * Pick a font size for the value based on its rendered character length.
+ * Short values get the standard text-2xl; longer ones step down so the
+ * full string still fits inside the card without wrapping or truncating.
+ * Tuned for the 4-up dashboard grid at common viewport widths.
+ */
+function valueFontSize(value: string | number): string {
+  const len = String(value).length;
+  if (len <= 10) return "text-2xl"; // "LKR 9,999"
+  if (len <= 14) return "text-xl";  // "LKR 99,999.99"
+  if (len <= 18) return "text-lg";  // "LKR 999,999.99"
+  return "text-base";               // 1M+ with decimals — still readable
+}
+
+/**
  * Explicit Tailwind colors (not theme tokens) so the cards look the same in
  * light and dark mode. Using --primary etc. would tint Total Revenue with
  * the brand red, which is not what we want.
@@ -60,7 +74,18 @@ export function StatCard({
         <div className="text-xs uppercase tracking-wide text-muted-foreground">
           {label}
         </div>
-        <div className="text-2xl font-semibold tabular-nums mt-1">{value}</div>
+        {/* Auto-shrink the value font based on string length so long
+            full-precision numbers (e.g. "LKR 1,234,567.89") still fit on
+            one line without changing the card height. nowrap + truncate
+            are safety nets for anything unexpectedly long. */}
+        <div
+          className={cn(
+            "font-semibold tabular-nums mt-1 whitespace-nowrap truncate",
+            valueFontSize(value),
+          )}
+        >
+          {value}
+        </div>
         {caption && (
           <div className="text-xs text-muted-foreground mt-1">{caption}</div>
         )}
