@@ -139,3 +139,10 @@
   0% { transform: translateX(-100%); }
   100% { transform: translateX(400%); }
 }
+/* Countdown ring for the Record Payment "Undo" toast. The ring drains
+   over 10s — visual cue that the undo window is running out. Circumference
+   of a r=10 circle is 2π × 10 ≈ 62.83. */
+@keyframes toast-undo-countdown {
+  from { stroke-dashoffset: 0; }
+  to { stroke-dashoffset: 62.83; }
+}

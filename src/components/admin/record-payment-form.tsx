@@ -119,6 +119,10 @@ export function RecordPaymentForm({
         paymentId
           ? {
               duration: 10_000,
+              // Replace the default check icon with a draining countdown
+              // ring — the admin sees how much undo time is left at a
+              // glance instead of having to mentally race the toast.
+              icon: <UndoCountdownRing />,
               action: {
                 label: "Undo",
                 onClick: async () => {
@@ -405,4 +409,45 @@ function formatDateSL(yyyyMmDd: string): string {
     "Dec",
   ][m - 1];
   return `${month} ${d}, ${y}`;
+}
+
+/**
+ * Draining countdown ring used as the Record Payment success-toast icon.
+ * Two stacked SVG circles: a faint track + an animated foreground ring
+ * whose stroke-dashoffset goes from 0 → full circumference over 10s,
+ * making the ring visually empty out as the undo window expires.
+ * Animation lives in globals.css (`@keyframes toast-undo-countdown`).
+ */
+function UndoCountdownRing() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="size-4"
+      style={{ transform: "rotate(-90deg)" }}
+      aria-hidden="true"
+    >
+      <circle
+        cx="12"
+        cy="12"
+        r="10"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        opacity="0.3"
+      />
+      <circle
+        cx="12"
+        cy="12"
+        r="10"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeDasharray="62.83"
+        style={{
+          animation: "toast-undo-countdown 10s linear forwards",
+        }}
+      />
+    </svg>
+  );
 }
