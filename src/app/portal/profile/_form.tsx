@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useState } from "react";
 import { updateMyProfile, type ProfileActionResult } from "./actions";
+import { normalizeAvatarUrl } from "@/lib/profiles/photo";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -110,8 +111,11 @@ export function ProfileForm({
         )}
       >
         <Avatar className="size-20 sm:size-16 shrink-0">
-          {profile.photoUrl ? (
-            <AvatarImage src={profile.photoUrl} alt={initial.fullName} />
+          {normalizeAvatarUrl(profile.photoUrl) ? (
+            <AvatarImage
+              src={normalizeAvatarUrl(profile.photoUrl)!}
+              alt={initial.fullName}
+            />
           ) : null}
           <AvatarFallback className="text-lg sm:text-base font-semibold">
             {initialsOf(initial.fullName)}

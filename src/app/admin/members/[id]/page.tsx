@@ -37,6 +37,7 @@ import { RejectButton } from "@/app/admin/pending/_reject-button";
 import { Clock } from "lucide-react";
 import { isWiped } from "@/lib/profiles/wiped";
 import { displayName } from "@/lib/profiles/display-name";
+import { normalizeAvatarUrl } from "@/lib/profiles/photo";
 
 export default async function MemberDetailPage({
   params,
@@ -66,7 +67,10 @@ export default async function MemberDetailPage({
   } catch {
     // Non-fatal — the avatar fallback renders initials.
   }
-  const avatarUrl = clerkImageUrl ?? member.photoUrl ?? null;
+  // Strip Clerk procedurally-generated default avatars (members who
+  // never uploaded a photo) so we render initials instead. Keeps the
+  // hero visual consistent with member-list rows.
+  const avatarUrl = normalizeAvatarUrl(clerkImageUrl ?? member.photoUrl);
 
   // Pending members have no history to show. Render a focused approval
   // screen with the profile hero + Approve/Reject CTAs and skip the empty

@@ -31,6 +31,7 @@ import {
 import { parseISO } from "date-fns";
 import { signedWorkoutPlanUrl } from "@/lib/storage/supabase-storage";
 import { displayName } from "@/lib/profiles/display-name";
+import { normalizeAvatarUrl } from "@/lib/profiles/photo";
 
 export default async function PortalHome() {
   const me = await requireMemberProfile();
@@ -199,7 +200,7 @@ export default async function PortalHome() {
   } catch {
     // ignore — initials fallback renders
   }
-  const avatarUrl = clerkImageUrl ?? me.photoUrl ?? null;
+  const avatarUrl = normalizeAvatarUrl(clerkImageUrl ?? me.photoUrl);
 
   // Lifetime totals for the stat cards.
   const totalPaid = paymentRows
