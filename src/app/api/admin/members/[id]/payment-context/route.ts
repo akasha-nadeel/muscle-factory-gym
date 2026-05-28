@@ -120,11 +120,25 @@ export async function GET(
       }
     : null;
 
+  // Derived from the same paymentRows already in memory — no extra query.
+  // The schema's partial unique index (payments_admission_per_member_unique)
+  // guarantees at most one succeeded admission row, so .find() is sufficient.
+  const succeededAdmission = paymentRows.find(
+    (p) => p.kind === "admission" && p.status === "succeeded",
+  );
+  const admissionPaid = succeededAdmission
+    ? {
+        amountLkr: succeededAdmission.amountLkr,
+        paidAt: succeededAdmission.paidAt,
+      }
+    : null;
+
   return NextResponse.json({
     outstandingLkr,
     nextPaymentDue,
     planPriceLkr: current?.planPriceLkr ?? null,
     planName: current?.planName ?? null,
     lastPayment,
+    admissionPaid,
   });
 }

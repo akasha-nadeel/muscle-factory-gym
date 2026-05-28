@@ -24,6 +24,9 @@ type PaymentContext = {
     method: "cash" | "bank_transfer" | "payhere";
     kind: "membership" | "admission";
   } | null;
+  /** The single succeeded admission payment, if one exists. The DB enforces
+   * uniqueness via a partial index, so this is at most one row. */
+  admissionPaid: { amountLkr: string; paidAt: string } | null;
 };
 
 /**
@@ -167,6 +170,17 @@ export function RecordPaymentForm({
         />
       )}
 
+      {/* Admission status panel — shown when admin picks Admission. Tells
+          them upfront whether the joining fee was already recorded so they
+          don't waste a click submitting a duplicate (which the DB unique
+          index would reject anyway). */}
+      {kind === "admission" && (
+        <AdmissionStatusPanel
+          loading={ctxLoading}
+          admissionPaid={ctx?.admissionPaid ?? null}
+        />
+      )}
+
       {/* Kind — segmented control. Admission tab is always available; the
           Membership tab is disabled when the member has no active plan. */}
       <div className="space-y-1.5">
@@ -261,8 +275,13 @@ export function RecordPaymentForm({
         <Button
           type="submit"
           size="sm"
-          disabled={pending}
-          className="bg-emerald-500 hover:bg-emerald-600 text-white"
+          // Block submit when admission is already paid — the DB unique
+          // index would reject it anyway; we save the admin a failed click.
+          disabled={
+            pending ||
+            (kind === "admission" && ctx?.admissionPaid !== null && ctx?.admissionPaid !== undefined)
+          }
+          className="bg-emerald-500 hover:bg-emerald-600 text-white disabled:bg-emerald-500/50 disabled:text-white disabled:opacity-100"
         >
           {pending ? (
             <>
@@ -452,5 +471,67 @@ function UndoCountdownRing() {
         }}
       />
     </svg>
+  );
+}
+
+/**
+ * Admission-fee status panel. Shown above the form when kind=admission so
+ * the admin knows upfront whether the joining fee was already recorded
+ * (preventing a wasted submit that the DB partial-unique index would
+ * reject). When already paid, the surrounding form's submit button is
+ * also disabled to make the "no-op" state unambiguous.
+ */
+function AdmissionStatusPanel({
+  loading,
+  admissionPaid,
+}: {
+  loading: boolean;
+  admissionPaid: { amountLkr: string; paidAt: string } | null;
+}) {
+  if (loading) {
+    return (
+      <div className="rounded-md border bg-muted/20 px-3 py-2.5 text-xs text-muted-foreground">
+        Loading admission status…
+      </div>
+    );
+  }
+  const fmt = (lkr: string | number) =>
+    `LKR ${Number(lkr).toLocaleString(undefined, {
+      maximumFractionDigits: 2,
+    })}`;
+
+  if (admissionPaid) {
+    return (
+      <div className="rounded-md border border-emerald-500/30 bg-emerald-50/40 dark:bg-emerald-950/20 px-3 py-2.5 text-sm">
+        <div className="flex flex-col gap-0.5">
+          <div className="flex items-baseline gap-2">
+            <span className="text-xs text-muted-foreground">Joining fee</span>
+            <span className="font-semibold tabular-nums text-emerald-700 dark:text-emerald-400">
+              Already paid
+            </span>
+          </div>
+          <div className="text-xs text-muted-foreground">
+            {fmt(admissionPaid.amountLkr)} on{" "}
+            {formatDateSL(admissionPaid.paidAt.slice(0, 10))}
+            {" • "}
+            <span className="text-amber-600 dark:text-amber-400">
+              Only one joining fee per member
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-md border bg-muted/20 px-3 py-2.5 text-sm">
+      <div className="flex items-baseline gap-2">
+        <span className="text-xs text-muted-foreground">Joining fee</span>
+        <span className="font-medium">Not recorded yet</span>
+      </div>
+      <div className="text-xs text-muted-foreground mt-0.5">
+        One-time fee. Recorded only once per member.
+      </div>
+    </div>
   );
 }
