@@ -154,6 +154,60 @@ export function RecordPaymentForm({
       ? Number(ctx.outstandingLkr)
       : null;
   const showOutstanding = kind === "membership" && hasMembership;
+  const admissionAlreadyPaid =
+    kind === "admission" && ctx?.admissionPaid != null;
+
+  // Collapsed state — when admission is already paid, the form fields are
+  // irrelevant (the DB unique index will reject any submission anyway).
+  // Show only the status panel + Kind toggle + Close, no form fields.
+  if (admissionAlreadyPaid && !ctxLoading) {
+    return (
+      <div className="space-y-4">
+        <AdmissionStatusPanel
+          loading={false}
+          admissionPaid={ctx?.admissionPaid ?? null}
+        />
+
+        {/* Kind toggle still rendered so admin can switch back to
+            Membership without closing the dialog (handy when picking the
+            wrong tab by mistake). */}
+        {hasMembership && (
+          <div className="space-y-1.5">
+            <Label>Kind</Label>
+            <div
+              role="radiogroup"
+              aria-label="Payment kind"
+              className="inline-flex w-full sm:w-auto rounded-md border p-0.5 bg-muted/40 text-xs"
+            >
+              <KindTab
+                label="Membership"
+                active={false}
+                onSelect={() => setKind("membership")}
+              />
+              <KindTab
+                label="Admission"
+                active={true}
+                onSelect={() => setKind("admission")}
+              />
+            </div>
+          </div>
+        )}
+
+        <div className="flex justify-end gap-2 pt-1">
+          {onCancel && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onCancel}
+            >
+              Close
+            </Button>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <form action={dispatch} className="space-y-4">
@@ -170,10 +224,9 @@ export function RecordPaymentForm({
         />
       )}
 
-      {/* Admission status panel — shown when admin picks Admission. Tells
-          them upfront whether the joining fee was already recorded so they
-          don't waste a click submitting a duplicate (which the DB unique
-          index would reject anyway). */}
+      {/* Admission status panel — shown when admin picks Admission and
+          the fee hasn't been recorded yet (the already-paid case short-
+          circuits above). */}
       {kind === "admission" && (
         <AdmissionStatusPanel
           loading={ctxLoading}
