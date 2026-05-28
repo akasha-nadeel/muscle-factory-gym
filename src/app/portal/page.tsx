@@ -32,6 +32,7 @@ import { parseISO } from "date-fns";
 import { signedWorkoutPlanUrl } from "@/lib/storage/supabase-storage";
 import { displayName } from "@/lib/profiles/display-name";
 import { normalizeAvatarUrl } from "@/lib/profiles/photo";
+import { avatarColorClass } from "@/lib/profiles/avatar-color";
 
 export default async function PortalHome() {
   const me = await requireMemberProfile();
@@ -189,18 +190,29 @@ export default async function PortalHome() {
         })
       : null;
 
-  // Hero avatar: prefer Clerk's imageUrl (always current), fall back to DB
-  // photoUrl, then initials. Non-fatal — try/catch keeps the page rendering
-  // even if Clerk is briefly unreachable.
+  // Hero avatar AND name come from Clerk live — keeps the portal in sync
+  // with whatever the member just changed in their Clerk profile, even if
+  // the user.updated webhook hasn't reached us yet (e.g. localhost dev,
+  // or a brief webhook delay on prod). Falls back to DB values when Clerk
+  // is briefly unreachable. Non-fatal — try/catch keeps the page rendering.
   let clerkImageUrl: string | null = null;
+  let clerkFullName: string | null = null;
   try {
     const client = await clerkClient();
     const clerkUser = await client.users.getUser(me.clerkUserId);
     clerkImageUrl = clerkUser.imageUrl ?? null;
+    const joined = [clerkUser.firstName, clerkUser.lastName]
+      .filter(Boolean)
+      .join(" ")
+      .trim();
+    clerkFullName = joined || null;
   } catch {
-    // ignore — initials fallback renders
+    // ignore — DB fallbacks render below
   }
   const avatarUrl = normalizeAvatarUrl(clerkImageUrl ?? me.photoUrl);
+  // Prefer live Clerk name; fall back to DB-stored fullName; displayName()
+  // strips @-domain when the value is still an email-as-name.
+  const heroName = displayName(clerkFullName ?? me.fullName);
 
   // Lifetime totals for the stat cards.
   const totalPaid = paymentRows
@@ -247,19 +259,21 @@ export default async function PortalHome() {
               {avatarUrl ? (
                 <AvatarImage
                   src={avatarUrl}
-                  alt={me.fullName}
+                  alt={heroName}
                   className="rounded-2xl"
                 />
               ) : null}
-              <AvatarFallback className="rounded-2xl text-lg font-semibold">
-                {initialsOf(me.fullName)}
+              <AvatarFallback
+                className={`rounded-2xl text-lg font-semibold text-white ${avatarColorClass(heroName)}`}
+              >
+                {initialsOf(heroName)}
               </AvatarFallback>
             </Avatar>
           </div>
           <div className="min-w-0 flex-1 space-y-2 text-center sm:text-left">
             <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3">
               <h2 className="text-2xl font-semibold leading-tight break-words">
-                {displayName(me.fullName)}
+                {heroName}
               </h2>
               <StatusPill variant="active">active</StatusPill>
             </div>
@@ -432,7 +446,7 @@ export default async function PortalHome() {
         </div>
 
         {/* Desktop: table */}
-        <div className="hidden md:block">
+        <div className="hidden md:block overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -465,43 +479,90 @@ export default async function PortalHome() {
 
       <div>
         <h3 className="text-lg font-semibold mb-3">Payment history</h3>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-32">Paid at</TableHead>
-              <TableHead className="w-28">Kind</TableHead>
-              <TableHead className="w-28">Method</TableHead>
-              <TableHead className="w-32 text-right">Amount (LKR)</TableHead>
-              <TableHead className="w-32">Status</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {paymentRows.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center text-muted-foreground py-6">
-                  No payments yet.
-                </TableCell>
-              </TableRow>
-            )}
-            {paymentRows.map((p) => {
+
+        {/* Mobile: stacked cards. Five-column tables don't fit on phone
+            widths; the card layout keeps each payment legible and
+            scannable. */}
+        <div className="md:hidden space-y-2">
+          {paymentRows.length === 0 ? (
+            <div className="rounded-lg border bg-card px-4 py-6 text-center text-sm text-muted-foreground">
+              No payments yet.
+            </div>
+          ) : (
+            paymentRows.map((p) => {
               const num = Number(p.amountLkr);
               return (
-                <TableRow key={p.id} className={p.status === "refunded" ? "opacity-70" : ""}>
-                  <TableCell>{format(p.paidAt, "PP")}</TableCell>
-                  <TableCell>{p.kind}</TableCell>
-                  <TableCell>{p.method}</TableCell>
-                  <TableCell className="text-right">
-                    {num < 0 ? "-" : ""}
-                    {Math.abs(num).toLocaleString()}
-                  </TableCell>
-                  <TableCell>
+                <div
+                  key={p.id}
+                  className={`rounded-lg border bg-card px-3 py-2.5 ${
+                    p.status === "refunded" ? "opacity-70" : ""
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="text-sm font-medium tabular-nums">
+                        {num < 0 ? "-" : ""}LKR{" "}
+                        {Math.abs(num).toLocaleString()}
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-0.5">
+                        {format(p.paidAt, "PP")} · {p.kind} · {p.method}
+                      </div>
+                    </div>
                     <StatusPill variant={p.status}>{p.status}</StatusPill>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* Desktop: standard table, scrollable horizontally as a safety
+            net for unusually narrow desktop widths. */}
+        <div className="hidden md:block overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-32">Paid at</TableHead>
+                <TableHead className="w-28">Kind</TableHead>
+                <TableHead className="w-28">Method</TableHead>
+                <TableHead className="w-32 text-right">Amount (LKR)</TableHead>
+                <TableHead className="w-32">Status</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {paymentRows.length === 0 && (
+                <TableRow>
+                  <TableCell
+                    colSpan={5}
+                    className="text-center text-muted-foreground py-6"
+                  >
+                    No payments yet.
                   </TableCell>
                 </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
+              )}
+              {paymentRows.map((p) => {
+                const num = Number(p.amountLkr);
+                return (
+                  <TableRow
+                    key={p.id}
+                    className={p.status === "refunded" ? "opacity-70" : ""}
+                  >
+                    <TableCell>{format(p.paidAt, "PP")}</TableCell>
+                    <TableCell>{p.kind}</TableCell>
+                    <TableCell>{p.method}</TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {num < 0 ? "-" : ""}
+                      {Math.abs(num).toLocaleString()}
+                    </TableCell>
+                    <TableCell>
+                      <StatusPill variant={p.status}>{p.status}</StatusPill>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </div>
       </div>
     </div>
   );

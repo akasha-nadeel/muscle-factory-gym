@@ -6,15 +6,18 @@ export type StatCardAccent = "red" | "green" | "amber" | "blue" | "default";
 /**
  * Pick a font size for the value based on its rendered character length.
  * Short values get the standard text-2xl; longer ones step down so the
- * full string still fits inside the card without wrapping or truncating.
- * Tuned for the 4-up dashboard grid at common viewport widths.
+ * full string still fits inside a 4-up card grid without wrapping or
+ * truncating, even at the narrow viewports where each card is ~200px
+ * (e.g. desktop with DevTools open, or the portal's 4-col layout at
+ * lg breakpoint).
  */
 function valueFontSize(value: string | number): string {
   const len = String(value).length;
-  if (len <= 10) return "text-2xl"; // "LKR 9,999"
-  if (len <= 14) return "text-xl";  // "LKR 99,999.99"
-  if (len <= 18) return "text-lg";  // "LKR 999,999.99"
-  return "text-base";               // 1M+ with decimals — still readable
+  if (len <= 8) return "text-2xl";  // "LKR 999"
+  if (len <= 11) return "text-xl";  // "LKR 9,999"
+  if (len <= 14) return "text-lg";  // "LKR 99,999.99"
+  if (len <= 18) return "text-base"; // "LKR 999,999.99"
+  return "text-sm";                  // 1M+ with decimals — still readable
 }
 
 /**

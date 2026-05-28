@@ -1,16 +1,18 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { initialsOf } from "@/lib/initials";
+import { avatarColorClass } from "@/lib/profiles/avatar-color";
 import { normalizeAvatarUrl } from "@/lib/profiles/photo";
 import { cn } from "@/lib/utils";
 
 /**
- * Avatar with a Clerk image URL fallback to initials. The base-ui Avatar
- * already swaps to the fallback automatically when the image fails to load,
- * so we just pass both branches in.
+ * Avatar with a Clerk image URL fallback to colored initials. The base-ui
+ * Avatar swaps to the fallback automatically when the image fails to load,
+ * so we pass both branches in.
  *
- * `normalizeAvatarUrl` strips Clerk's procedurally-generated default
- * avatars so members without a real photo all render the same initials
- * styling — keeps member-list / picker visuals coherent.
+ * `normalizeAvatarUrl` strips Clerk's procedural defaults + OAuth-proxied
+ * generic avatars so the no-photo state is consistent across all members.
+ * `avatarColorClass` then gives each member a deterministic colored
+ * background, so the initials look intentional instead of empty.
  */
 export function MemberAvatar({
   fullName,
@@ -33,7 +35,17 @@ export function MemberAvatar({
   return (
     <Avatar className={cn(sizeClasses, className)}>
       {effective ? <AvatarImage src={effective} alt={fullName} /> : null}
-      <AvatarFallback>{initialsOf(fullName)}</AvatarFallback>
+      <AvatarFallback
+        className={cn(
+          // Deterministic colored bg + white text for the initials state.
+          // Overrides the default `bg-muted text-muted-foreground` from
+          // ui/avatar.tsx so initials are always legible.
+          avatarColorClass(fullName),
+          "text-white font-medium",
+        )}
+      >
+        {initialsOf(fullName)}
+      </AvatarFallback>
     </Avatar>
   );
 }

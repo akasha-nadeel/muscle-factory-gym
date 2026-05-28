@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useState } from "react";
 import { updateMyProfile, type ProfileActionResult } from "./actions";
 import { normalizeAvatarUrl } from "@/lib/profiles/photo";
+import { avatarColorClass } from "@/lib/profiles/avatar-color";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -117,7 +118,9 @@ export function ProfileForm({
               alt={initial.fullName}
             />
           ) : null}
-          <AvatarFallback className="text-lg sm:text-base font-semibold">
+          <AvatarFallback
+            className={`text-lg sm:text-base font-semibold text-white ${avatarColorClass(initial.fullName)}`}
+          >
             {initialsOf(initial.fullName)}
           </AvatarFallback>
         </Avatar>

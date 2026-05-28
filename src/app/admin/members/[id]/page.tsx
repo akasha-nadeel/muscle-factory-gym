@@ -38,6 +38,7 @@ import { Clock } from "lucide-react";
 import { isWiped } from "@/lib/profiles/wiped";
 import { displayName } from "@/lib/profiles/display-name";
 import { normalizeAvatarUrl } from "@/lib/profiles/photo";
+import { avatarColorClass } from "@/lib/profiles/avatar-color";
 
 export default async function MemberDetailPage({
   params,
@@ -56,14 +57,21 @@ export default async function MemberDetailPage({
 
   const wiped = isWiped(member);
 
-  // Pull the member's Clerk avatar so admin sees the same image Clerk uses
-  // for emails / member's own profile. Falls back to DB photoUrl, then to
-  // an initial avatar in the JSX below if both are missing.
+  // Pull the member's Clerk avatar AND name so admin sees what the member
+  // just changed in their Clerk profile, even before the user.updated
+  // webhook syncs the DB. Falls back to DB values when Clerk is briefly
+  // unreachable. Non-fatal — fallbacks render below.
   let clerkImageUrl: string | null = null;
+  let clerkFullName: string | null = null;
   try {
     const client = await clerkClient();
     const clerkUser = await client.users.getUser(member.clerkUserId);
     clerkImageUrl = clerkUser.imageUrl ?? null;
+    const joined = [clerkUser.firstName, clerkUser.lastName]
+      .filter(Boolean)
+      .join(" ")
+      .trim();
+    clerkFullName = joined || null;
   } catch {
     // Non-fatal — the avatar fallback renders initials.
   }
@@ -71,6 +79,9 @@ export default async function MemberDetailPage({
   // never uploaded a photo) so we render initials instead. Keeps the
   // hero visual consistent with member-list rows.
   const avatarUrl = normalizeAvatarUrl(clerkImageUrl ?? member.photoUrl);
+  // Prefer live Clerk name; fall back to DB; displayName() strips
+  // @-domain from email-as-name fallbacks.
+  const heroName = displayName(clerkFullName ?? member.fullName);
 
   // Pending members have no history to show. Render a focused approval
   // screen with the profile hero + Approve/Reject CTAs and skip the empty
@@ -106,7 +117,9 @@ export default async function MemberDetailPage({
                       className="rounded-2xl"
                     />
                   ) : null}
-                  <AvatarFallback className="rounded-2xl text-lg font-semibold">
+                  <AvatarFallback
+                    className={`rounded-2xl text-lg font-semibold text-white ${avatarColorClass(member.fullName)}`}
+                  >
                     {initialsOf(member.fullName)}
                   </AvatarFallback>
                 </Avatar>
@@ -298,7 +311,7 @@ export default async function MemberDetailPage({
     <AdminPage
       breadcrumbs={[
         { label: "Members", href: "/admin/members" },
-        { label: displayName(member.fullName) },
+        { label: heroName },
       ]}
     >
       <div className="space-y-6">
@@ -353,19 +366,21 @@ export default async function MemberDetailPage({
                 {avatarUrl ? (
                   <AvatarImage
                     src={avatarUrl}
-                    alt={member.fullName}
+                    alt={heroName}
                     className="rounded-2xl"
                   />
                 ) : null}
-                <AvatarFallback className="rounded-2xl text-lg font-semibold">
-                  {initialsOf(member.fullName)}
+                <AvatarFallback
+                  className={`rounded-2xl text-lg font-semibold text-white ${avatarColorClass(heroName)}`}
+                >
+                  {initialsOf(heroName)}
                 </AvatarFallback>
               </Avatar>
             </div>
             <div className="min-w-0 flex-1 space-y-2 text-center sm:text-left">
               <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3">
                 <h2 className="text-2xl font-semibold leading-tight break-words">
-                  {displayName(member.fullName)}
+                  {heroName}
                 </h2>
                 <StatusPill variant={member.status}>{member.status}</StatusPill>
               </div>
