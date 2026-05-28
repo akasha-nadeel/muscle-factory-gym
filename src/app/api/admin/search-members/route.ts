@@ -51,10 +51,20 @@ export async function GET(req: Request) {
   ];
   if (activeOnly) conds.push(sql`p.status = 'active'`);
   if (pattern) {
+    // Match name + gym ID only — what the input placeholder promises.
+    // Email matches were causing confusing results (e.g. typing
+    // "nadeelakasha" returning "Akasha Nadeel" because their email
+    // contained the username). The top-bar global search keeps the
+    // wider email match because that's a "find anyone" affordance.
     const ors: ReturnType<typeof sql>[] = [
       sql`p.full_name ILIKE ${pattern}`,
-      sql`p.email ILIKE ${pattern}`,
     ];
+    // Allow email-username matches only on the picker (activeOnly mode)
+    // when the query looks email-shaped — i.e. when fullName itself is
+    // the email (OAuth signups), the substring already lives in
+    // full_name so the line above catches it. Keep email match for the
+    // top-bar global search.
+    if (!activeOnly) ors.push(sql`p.email ILIKE ${pattern}`);
     if (numeric !== null) ors.push(sql`p.gym_id = ${numeric}`);
     conds.push(sql`(${sql.join(ors, sql` OR `)})`);
   }
