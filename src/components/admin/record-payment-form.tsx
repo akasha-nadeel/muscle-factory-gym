@@ -379,9 +379,12 @@ function OutstandingPanel({
           <Button
             type="button"
             size="sm"
-            variant="outline"
             onClick={() => onUseFullAmount(outstanding.toString())}
-            className="shrink-0"
+            // Solid amber to match the panel's amber language — reads as
+            // the panel's primary affordance instead of an outline that
+            // disappears against the amber tint in light mode. White text
+            // in both themes for max contrast against the saturated bg.
+            className="shrink-0 bg-amber-500 text-white hover:bg-amber-600 hover:text-white border-transparent shadow-sm"
           >
             <RotateCcw className="size-3.5" />
             Use {fmt(outstanding)}
