@@ -1,14 +1,20 @@
 /**
- * One-time backfill of profiles.photo_url from Clerk.
+ * Backfill / refresh profiles.photo_url from Clerk.
  *
  * Run manually (not in CI):
- *   npx tsx scripts/backfill-clerk-photos.ts
+ *   npx tsx scripts/backfill-clerk-photos.ts           # only NULL rows
+ *   npx tsx scripts/backfill-clerk-photos.ts --all     # refresh every row
  *
- * For each profile where photo_url IS NULL we hit clerkClient().users.getUser
- * and persist the imageUrl. A 100ms sleep between calls keeps us under
- * Clerk's ~20 req/s soft limit.
+ * `--all` is useful when:
+ *  - The Clerk webhook wasn't configured for production yet, so existing
+ *    members' photos never made it into the DB.
+ *  - A member updated their Clerk photo and the user.updated webhook
+ *    didn't fire (e.g. localhost dev, or webhook misconfigured).
  *
- * Idempotent — re-running only touches rows still missing photoUrl.
+ * For each row we hit clerkClient().users.getUser and persist the imageUrl.
+ * A 100ms sleep between calls keeps us under Clerk's ~20 req/s soft limit.
+ *
+ * Idempotent — safe to re-run any time.
  */
 // Loads .env.local + .env into process.env. MUST be the first import — it
 // runs as a side-effect before sibling imports below pull in src/db/index.ts,
@@ -16,7 +22,7 @@
 import "./_load-env";
 
 import { clerkClient } from "@clerk/nextjs/server";
-import { isNull, eq } from "drizzle-orm";
+import { isNull, eq, like, and, not } from "drizzle-orm";
 import { db } from "../src/db";
 import { profiles } from "../src/db/schema";
 
@@ -25,12 +31,27 @@ async function sleep(ms: number) {
 }
 
 async function main() {
+  const refreshAll = process.argv.includes("--all");
+
+  // Skip wiped profiles (clerk_user_id starts with 'removed:' — Clerk would
+  // reject the lookup anyway).
+  const where = refreshAll
+    ? and(not(like(profiles.clerkUserId, "removed:%")))
+    : and(
+        isNull(profiles.photoUrl),
+        not(like(profiles.clerkUserId, "removed:%")),
+      );
+
   const rows = await db
     .select({ id: profiles.id, clerkUserId: profiles.clerkUserId })
     .from(profiles)
-    .where(isNull(profiles.photoUrl));
+    .where(where);
 
-  console.log(`Found ${rows.length} profile(s) missing photo_url.`);
+  console.log(
+    refreshAll
+      ? `Refreshing photo_url for ${rows.length} profile(s) from Clerk.`
+      : `Found ${rows.length} profile(s) missing photo_url.`,
+  );
   if (rows.length === 0) return;
 
   const client = await clerkClient();
