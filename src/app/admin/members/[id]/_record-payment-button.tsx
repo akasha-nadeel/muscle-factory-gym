@@ -229,18 +229,18 @@ function RenewSafeguardContent({
         {/* Icon circle — centered on the dip apex (SVG bottom-center).
             Half overlaps the amber zone, half hangs into the body. */}
         <div
-          className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 size-14 rounded-full bg-popover flex items-center justify-center shadow-md ring-2 ring-amber-500/30"
+          className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 size-20 rounded-full bg-popover flex items-center justify-center shadow-md ring-2 ring-amber-500/30"
           style={{ top: "100%" }}
         >
           <AlertTriangle
-            className="size-7 text-amber-500"
+            className="size-10 text-amber-500"
             strokeWidth={2.5}
           />
         </div>
       </div>
 
       {/* Body — padded above to clear the floating icon. */}
-      <div className="px-6 pt-10 pb-6 text-center">
+      <div className="px-6 pt-14 pb-6 text-center">
         <h2 className="text-xl font-bold text-amber-600 dark:text-amber-400 tracking-tight">
           {headline}
         </h2>
