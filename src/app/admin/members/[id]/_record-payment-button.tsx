@@ -13,6 +13,7 @@ import { MemberAvatar } from "@/components/admin/member-avatar";
 import { RecordPaymentForm } from "@/components/admin/record-payment-form";
 import { displayName } from "@/lib/profiles/display-name";
 import { todayInSL } from "@/lib/tz";
+import { inferCyclePeriod } from "@/lib/payments/next-due";
 
 /** Days threshold — at/under this the wrong action is almost certainly
  *  Record Payment vs Renew. Beyond gives normal mid-cycle runway. */
@@ -69,7 +70,13 @@ export function RecordPaymentButton({
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
 
-  const safeguard = renewState(currentEndDate ?? null);
+  // Daily-pass only: monthly/quarterly/yearly members rarely confuse
+  // Record-payment vs Renew (they use the prominent Renew button), and
+  // gating to daily avoids false positives when settling a monthly
+  // member's current-cycle dues near their renewal date. The Renew button
+  // itself stays available for ALL members — only this nudge is daily-scoped.
+  const isDailyPlan = inferCyclePeriod(memberPlanName ?? "") === "daily";
+  const safeguard = isDailyPlan ? renewState(currentEndDate ?? null) : null;
 
   function handleTriggerClick() {
     // Only confirm when the active plan is at/past expiry. Mid-cycle
