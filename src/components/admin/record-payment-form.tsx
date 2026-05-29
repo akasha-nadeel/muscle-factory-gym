@@ -1,7 +1,7 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useRef, useState } from "react";
-import { Loader2, RotateCcw, AlertTriangle, ArrowRight } from "lucide-react";
+import { useActionState, useEffect, useRef, useState } from "react";
+import { Loader2, RotateCcw } from "lucide-react";
 import {
   recordPayment,
   undoRecentPayment,
@@ -12,7 +12,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { todayInSL } from "@/lib/tz";
 
 type PaymentContext = {
   outstandingLkr: string | null;
@@ -20,7 +19,7 @@ type PaymentContext = {
   planPriceLkr: string | null;
   planName: string | null;
   /** End date of the member's currently-active membership (YYYY-MM-DD).
-   * Drives the "did you mean Renew?" safeguard. */
+   * Used elsewhere for the upfront renewal safeguard confirmation. */
   currentEndDate: string | null;
   lastPayment: {
     amountLkr: string;
@@ -32,43 +31,6 @@ type PaymentContext = {
    * uniqueness via a partial index, so this is at most one row. */
   admissionPaid: { amountLkr: string; paidAt: string } | null;
 };
-
-/** Daily-or-tomorrow threshold for the renewal safeguard. Anything beyond
- *  this gives the admin enough runway to do a normal mid-cycle payment.
- *  At/under it, the wrong action is almost certainly Record Payment. */
-const RENEW_NUDGE_DAYS = 2;
-
-/**
- * Decide whether to surface the renewal-safeguard banner. The banner
- * targets the high-damage case: admin records a payment on a Daily/Monthly
- * plan that's about to expire (or already has), thinking it extends them,
- * when it actually just logs against the dying cycle.
- *
- * @returns "expired" | "today" | "tomorrow" | null
- */
-function renewSafeguardState(
-  kind: "membership" | "admission",
-  hasMembership: boolean,
-  currentEndDate: string | null,
-): "expired" | "today" | "tomorrow" | null {
-  if (kind !== "membership" || !hasMembership || !currentEndDate) return null;
-  const today = todayInSL();
-  if (currentEndDate < today) return "expired";
-  if (currentEndDate === today) return "today";
-  // currentEndDate === today + 1 day?
-  const [y, m, d] = today.split("-").map(Number);
-  const tomorrowDate = new Date(Date.UTC(y, m - 1, d + 1));
-  const tomorrow = `${tomorrowDate.getUTCFullYear()}-${String(
-    tomorrowDate.getUTCMonth() + 1,
-  ).padStart(2, "0")}-${String(tomorrowDate.getUTCDate()).padStart(2, "0")}`;
-  if (currentEndDate === tomorrow) return "tomorrow";
-  // Beyond 2 days — admin is doing a normal mid-cycle payment, no nudge.
-  const diffMs =
-    new Date(`${currentEndDate}T00:00:00Z`).getTime() -
-    new Date(`${today}T00:00:00Z`).getTime();
-  const diffDays = Math.round(diffMs / (24 * 60 * 60 * 1000));
-  return diffDays <= RENEW_NUDGE_DAYS ? "tomorrow" : null;
-}
 
 /**
  * Shared payment form. Used by:
@@ -89,7 +51,6 @@ export function RecordPaymentForm({
   successToastName,
   onSuccess,
   onCancel,
-  onSwitchToRenew,
 }: {
   memberId: string;
   currentMembershipId: string | null;
@@ -99,10 +60,6 @@ export function RecordPaymentForm({
   onSuccess?: () => void;
   /** When provided, a Cancel button is shown in the footer. */
   onCancel?: () => void;
-  /** When provided, the renewal-safeguard banner renders an "Open Renew
-   * instead" CTA that calls this. Caller is responsible for closing this
-   * dialog and triggering the Renew dialog. */
-  onSwitchToRenew?: () => void;
 }) {
   const hasMembership = currentMembershipId !== null;
   const [kind, setKind] = useState<"membership" | "admission">(
@@ -111,9 +68,6 @@ export function RecordPaymentForm({
   const [amount, setAmount] = useState("");
   const [ctx, setCtx] = useState<PaymentContext | null>(null);
   const [ctxLoading, setCtxLoading] = useState(true);
-  /** Admin can dismiss the safeguard banner if they really do mean to
-   *  record a payment without renewing (rare edge cases). */
-  const [renewNudgeDismissed, setRenewNudgeDismissed] = useState(false);
 
   // Fetch payment context (outstanding, next due, last payment) on mount.
   useEffect(() => {
@@ -205,14 +159,6 @@ export function RecordPaymentForm({
   const showOutstanding = kind === "membership" && hasMembership;
   const admissionAlreadyPaid =
     kind === "admission" && ctx?.admissionPaid != null;
-  /** Renewal-safeguard — null when the membership is healthy mid-cycle,
-   *  otherwise "expired" | "today" | "tomorrow" for the banner copy. */
-  const renewState = useMemo(
-    () =>
-      renewSafeguardState(kind, hasMembership, ctx?.currentEndDate ?? null),
-    [kind, hasMembership, ctx?.currentEndDate],
-  );
-  const showRenewNudge = renewState !== null && !renewNudgeDismissed;
 
   // Collapsed state — when admission is already paid, the form fields are
   // irrelevant (the DB unique index will reject any submission anyway).
@@ -269,23 +215,6 @@ export function RecordPaymentForm({
   return (
     <form action={dispatch} className="space-y-4">
       <input type="hidden" name="kind" value={kind} />
-
-      {/* Renewal safeguard — top-of-form banner when the current membership
-          is at/past expiry. Banking-app warning pattern: clear copy on
-          consequence, primary CTA to the recommended path (Renew),
-          secondary affordance to dismiss when admin really means to record
-          a payment on the dying cycle. */}
-      {showRenewNudge && renewState && (
-        <RenewSafeguardBanner
-          state={renewState}
-          planName={ctx?.planName ?? null}
-          canSwitchToRenew={!!onSwitchToRenew}
-          onSwitchToRenew={() => {
-            onSwitchToRenew?.();
-          }}
-          onDismiss={() => setRenewNudgeDismissed(true)}
-        />
-      )}
 
       {/* Outstanding panel — only when recording a membership payment. */}
       {showOutstanding && (
@@ -598,93 +527,6 @@ function UndoCountdownRing() {
         }}
       />
     </svg>
-  );
-}
-
-/**
- * Renewal safeguard banner. Shown at the top of the Record Payment form
- * when the active membership is at/past expiry — the high-damage window
- * where the wrong button (Record Payment vs Renew) creates the most
- * customer-support pain (member pays cash, plan still dies, can't check
- * in next day).
- *
- * Design intent — banking-app warning pattern:
- *   - Amber surface (warning, not error — the admin isn't blocked)
- *   - Plain-language title and consequence ("won't extend")
- *   - Primary CTA = the recommended path (Renew)
- *   - Dismissible — admin can keep going when they really mean it
- *     (e.g. recording a past-due payment that was missed last cycle)
- *
- * The CTA renders only when the parent provides onSwitchToRenew (member
- * detail page does; the dashboard modal doesn't, since the Renew button
- * isn't reachable from there). Without the CTA, the banner is still
- * informational — admin knows they may be making a mistake.
- */
-function RenewSafeguardBanner({
-  state,
-  planName,
-  canSwitchToRenew,
-  onSwitchToRenew,
-  onDismiss,
-}: {
-  state: "expired" | "today" | "tomorrow";
-  planName: string | null;
-  canSwitchToRenew: boolean;
-  onSwitchToRenew: () => void;
-  onDismiss: () => void;
-}) {
-  const plan = planName ?? "membership";
-  const headline =
-    state === "expired"
-      ? `${plan} has already expired`
-      : state === "today"
-        ? `${plan} ends today`
-        : `${plan} ends tomorrow`;
-
-  return (
-    <div
-      role="alert"
-      className="rounded-md border border-amber-500/50 bg-amber-50/70 dark:bg-amber-950/30 p-3 space-y-2.5"
-    >
-      <div className="flex items-start gap-2.5">
-        <div className="size-8 shrink-0 rounded-md bg-amber-500/20 text-amber-700 dark:text-amber-400 flex items-center justify-center">
-          <AlertTriangle className="size-4" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold text-amber-900 dark:text-amber-100">
-            {headline} — did you mean to renew?
-          </p>
-          <p className="text-xs text-amber-800/80 dark:text-amber-200/80 mt-0.5">
-            Recording a payment here{" "}
-            <span className="font-medium">won&apos;t extend</span> the
-            membership. To start a new cycle, use{" "}
-            <span className="font-medium">Renew membership</span>.
-          </p>
-        </div>
-      </div>
-      <div className="flex flex-wrap items-center justify-end gap-2 pl-10">
-        {canSwitchToRenew && (
-          <Button
-            type="button"
-            size="sm"
-            onClick={onSwitchToRenew}
-            className="bg-amber-500 text-white hover:bg-amber-600 border-transparent"
-          >
-            Open Renew instead
-            <ArrowRight className="size-3.5" />
-          </Button>
-        )}
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={onDismiss}
-          className="border-amber-500/40 text-amber-900 dark:text-amber-100 hover:bg-amber-500/10"
-        >
-          Continue with payment
-        </Button>
-      </div>
-    </div>
   );
 }
 

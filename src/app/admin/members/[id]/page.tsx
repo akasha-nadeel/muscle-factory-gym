@@ -492,6 +492,7 @@ export default async function MemberDetailPage({
                 memberGymId={member.gymId}
                 memberPlanName={current?.planName ?? null}
                 currentMembershipId={current?.id ?? null}
+                currentEndDate={current?.endDate ?? null}
               />
             )}
           </div>
