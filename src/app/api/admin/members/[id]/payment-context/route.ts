@@ -138,6 +138,11 @@ export async function GET(
     nextPaymentDue,
     planPriceLkr: current?.planPriceLkr ?? null,
     planName: current?.planName ?? null,
+    // currentEndDate powers the "did you mean Renew?" safeguard banner —
+    // when the active membership ends within ~2 days OR is already past,
+    // recording a payment won't extend it. The form shows a warning + a
+    // direct "Open Renew instead" CTA in that case.
+    currentEndDate: current?.endDate ?? null,
     lastPayment,
     admissionPaid,
   });

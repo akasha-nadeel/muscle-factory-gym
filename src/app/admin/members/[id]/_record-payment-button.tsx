@@ -70,6 +70,13 @@ export function RecordPaymentButton({
             successToastName={displayName(memberName)}
             onSuccess={() => setOpen(false)}
             onCancel={() => setOpen(false)}
+            onSwitchToRenew={() => {
+              // Close this dialog, then ask the Renew button on the same
+              // page to open its dialog via a decoupled window event so we
+              // don't need to share state between sibling components.
+              setOpen(false);
+              window.dispatchEvent(new CustomEvent("mfg:open-renew-dialog"));
+            }}
           />
         </DialogContent>
       </Dialog>

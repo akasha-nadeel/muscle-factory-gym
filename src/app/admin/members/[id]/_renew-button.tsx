@@ -74,6 +74,18 @@ export function RenewMembershipButton({
     }
   }, [state, memberName]);
 
+  // Cross-dialog trigger: the RecordPaymentForm safeguard banner fires a
+  // window event when admin clicks "Open Renew instead", and this button
+  // listens for it and opens its own dialog. Decoupled — no shared state
+  // between sibling components needed.
+  useEffect(() => {
+    function handler() {
+      setOpen(true);
+    }
+    window.addEventListener("mfg:open-renew-dialog", handler);
+    return () => window.removeEventListener("mfg:open-renew-dialog", handler);
+  }, []);
+
   useEffect(() => {
     if (!open) {
       setPlanId(defaultPlanId);
