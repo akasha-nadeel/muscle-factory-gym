@@ -4,19 +4,17 @@ import type { LucideIcon } from "lucide-react";
 export type StatCardAccent = "red" | "green" | "amber" | "blue" | "default";
 
 /**
- * Pick a font size for the value based on its rendered character length.
- * Tightened breakpoints (after seeing "LKR 5,499.99" truncate on tablet
- * 2-col layout where each card is ~165px wide). Cards step down faster
- * so long strings fit even in the worst-case narrow card.
+ * Worst-case length-based floor — combined with container queries on the
+ * card, this guarantees values like "LKR 9,999,999.99" (16 chars) still
+ * fit even in the most cramped grid (e.g. 4-col with DevTools open).
+ * Container queries handle the upscaling; this prevents over-scaling.
  */
-function valueFontSize(value: string | number): string {
+function valueMaxSizeClass(value: string | number): string {
   const len = String(value).length;
-  if (len <= 5) return "text-2xl";   // "LKR 9"
-  if (len <= 8) return "text-xl";    // "LKR 999"
-  if (len <= 11) return "text-lg";   // "LKR 9,999"
-  if (len <= 14) return "text-base"; // "LKR 99,999.99"
-  if (len <= 18) return "text-sm";   // "LKR 999,999.99"
-  return "text-xs";                  // 1M+ with decimals — still readable
+  if (len <= 6) return ""; // any container size
+  if (len <= 9) return "@[12rem]:text-lg @[16rem]:text-xl @[20rem]:text-2xl";
+  if (len <= 12) return "@[14rem]:text-base @[18rem]:text-lg @[22rem]:text-xl";
+  return "@[16rem]:text-sm @[20rem]:text-base @[24rem]:text-lg";
 }
 
 /**
@@ -59,37 +57,44 @@ export function StatCard({
     <div
       data-slot="stat-card"
       className={cn(
-        "rounded-xl border p-3 sm:p-5 flex items-start gap-2.5 sm:gap-4 transition-colors",
+        // @container makes the value font size respond to the card's own
+        // width (not the viewport), so a 4-col grid card and a 1-col mobile
+        // card auto-pick the right size with no manual breakpoints.
+        "@container rounded-xl border p-3 flex items-start gap-2.5 transition-colors",
         cardSurface[accentColor],
         className,
       )}
     >
       <div
         className={cn(
-          "size-9 sm:size-10 rounded-lg flex items-center justify-center shrink-0",
+          "size-8 rounded-lg flex items-center justify-center shrink-0",
           iconBg[accentColor],
         )}
       >
-        <Icon className="size-4 sm:size-5" />
+        <Icon className="size-4" />
       </div>
       <div className="flex-1 min-w-0">
-        <div className="text-[0.65rem] sm:text-xs uppercase tracking-wide text-muted-foreground">
+        <div className="text-[0.65rem] uppercase tracking-wide text-muted-foreground truncate">
           {label}
         </div>
-        {/* Auto-shrink the value font based on string length so long
-            full-precision numbers (e.g. "LKR 1,234,567.89") still fit on
-            one line without changing the card height. nowrap + truncate
-            are safety nets for anything unexpectedly long. */}
+        {/* Value font scales with container width via @container queries.
+            Base = text-sm (always fits, even at 100px content width).
+            Upscales via the length-keyed thresholds in valueMaxSizeClass —
+            short values can go up to text-2xl when there's room; long
+            values cap lower to avoid overflow. truncate is the final
+            safety net for anything unexpectedly long. */}
         <div
           className={cn(
-            "font-semibold tabular-nums mt-1 whitespace-nowrap truncate",
-            valueFontSize(value),
+            "font-semibold tabular-nums mt-1 whitespace-nowrap truncate text-sm",
+            valueMaxSizeClass(value),
           )}
         >
           {value}
         </div>
         {caption && (
-          <div className="text-xs text-muted-foreground mt-1">{caption}</div>
+          <div className="text-[0.65rem] @[14rem]:text-xs text-muted-foreground mt-1 line-clamp-2">
+            {caption}
+          </div>
         )}
       </div>
     </div>
