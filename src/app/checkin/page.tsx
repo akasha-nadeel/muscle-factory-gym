@@ -57,15 +57,56 @@ export default async function CheckinKioskPage() {
 
           {/* Right: rotating QR code for phone-camera scan */}
           <div className="w-full max-w-md mx-auto flex flex-col items-center gap-4">
-            <div className="text-center space-y-1">
-              <h2 className="text-xl sm:text-2xl font-semibold">
-                Or scan with your phone
-              </h2>
-              <p className="text-sm text-muted-foreground">
-                Point your camera at the QR to check in
-              </p>
-            </div>
+            <h2 className="text-xl sm:text-2xl font-semibold text-center">
+              Or scan with your phone
+            </h2>
             <KioskQR initialToken={initialToken} scanUrlBase={scanUrlBase} />
+
+            {/* Per-platform scan instructions. Each line tells the member to
+                use their phone's built-in camera — which opens the link in
+                the real browser (session kept → auto check-in) instead of an
+                in-app scanner browser that forces a re-sign-in. */}
+            <div className="w-full max-w-[300px] space-y-3.5 pt-1">
+              <div className="flex items-center gap-3">
+                <Image
+                  src="/apple.png"
+                  alt="Apple"
+                  width={80}
+                  height={80}
+                  className="size-10 shrink-0 object-contain"
+                />
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold leading-tight">iPhone</p>
+                  <p className="text-xs text-muted-foreground mt-0.5 leading-snug">
+                    Scan with{" "}
+                    <span className="text-sm font-semibold text-foreground">
+                      only
+                    </span>{" "}
+                    the{" "}
+                    <span className="text-sm font-semibold text-foreground">
+                      Camera app
+                    </span>
+                    , not a QR-scanner app.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <Image
+                  src="/android.png"
+                  alt="Android"
+                  width={80}
+                  height={80}
+                  className="size-10 shrink-0 object-contain"
+                />
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold leading-tight">Android</p>
+                  <p className="text-xs text-muted-foreground mt-0.5 leading-snug">
+                    Open your Camera or Google Lens, point at the QR, then tap
+                    the link.
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </main>
