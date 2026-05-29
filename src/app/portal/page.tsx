@@ -5,15 +5,11 @@ import { db } from "@/db";
 import { memberships, plans, payments, attendance, workoutPlans } from "@/db/schema";
 import { eq, desc, count } from "drizzle-orm";
 import { format } from "date-fns";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from "@/components/ui/table";
-import {
   FileText, Eye, Download,
-  Wallet, Calendar, AlertCircle, Activity, Mail,
+  Wallet, AlertCircle, Activity, Calendar as CalendarIcon,
+  Sparkles, AlertTriangle,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { StatCard } from "@/components/admin/stat-card";
@@ -22,7 +18,9 @@ import { GymIdCopy } from "@/components/admin/gym-id-copy";
 import { initialsOf } from "@/lib/initials";
 import { getCurrentMembership } from "@/lib/memberships/current";
 import { daysRemaining } from "@/lib/days-remaining";
-import { todayInSL, formatSLDate, formatSLTime, formatSLDateTime } from "@/lib/tz";
+import { todayInSL } from "@/lib/tz";
+import { RecentActivity } from "./_recent-activity";
+import { PaymentList } from "./_payment-list";
 import { computeOutstanding } from "@/lib/payments/outstanding";
 import {
   inferCyclePeriod,
@@ -241,329 +239,276 @@ export default async function PortalHome() {
     return `${days} day${days === 1 ? "" : "s"} remaining`;
   })();
 
+  // Greeting based on time of SL day — small personalization touch that
+  // makes the portal feel less institutional.
+  const hour = new Date(
+    new Date().toLocaleString("en-US", { timeZone: "Asia/Colombo" }),
+  ).getHours();
+  const greeting =
+    hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+
+  // Renewal urgency surfaced as a banner — drives action when expiry is
+  // imminent. Threshold matches what the admin uses for the Renew button.
+  const RENEWAL_HEADS_UP_DAYS = 7;
+  const daysLeft =
+    current !== null
+      ? Math.max(
+          0,
+          daysRemaining({ today, endDate: current.endDate }),
+        )
+      : null;
+  const showRenewalWarning =
+    current !== null && daysLeft !== null && daysLeft <= RENEWAL_HEADS_UP_DAYS;
+  const hasOutstanding = outstanding !== null && Number(outstanding) > 0;
+
   return (
-    <div className="space-y-6">
-      {/* Hero card */}
-      <div>
-        <h3 className="text-lg font-semibold mb-3">Profile</h3>
-        <div className="rounded-xl border bg-card p-4 sm:p-6 relative">
-          {/* Desktop: gym id copy widget at top-right */}
-          {me.gymId !== null && (
-            <div className="hidden sm:block absolute top-4 right-4">
-              <GymIdCopy gymId={me.gymId} />
-            </div>
-          )}
-        <div className="flex flex-col sm:flex-row sm:items-center gap-5">
-          <div className="shrink-0 self-center sm:self-start">
-            <Avatar className="size-20 rounded-2xl after:rounded-2xl">
-              {avatarUrl ? (
-                <AvatarImage
-                  src={avatarUrl}
-                  alt={heroName}
-                  className="rounded-2xl"
-                />
-              ) : null}
-              <AvatarFallback
-                className={`rounded-2xl text-lg font-semibold text-white ${avatarColorClass(heroName)}`}
-              >
-                {initialsOf(heroName)}
-              </AvatarFallback>
-            </Avatar>
-          </div>
-          <div className="min-w-0 flex-1 space-y-2 text-center sm:text-left">
-            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3">
-              <h2 className="text-2xl font-semibold leading-tight break-words">
-                {heroName}
-              </h2>
-              <StatusPill variant="active">active</StatusPill>
-            </div>
-            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-5 gap-y-2 text-sm text-muted-foreground">
-              <span className="inline-flex items-center gap-1.5">
-                <Mail className="size-4 shrink-0" />
-                <span className="break-all">{me.email}</span>
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <Calendar className="size-4 shrink-0" />
-                <span>Member since {format(me.createdAt, "MMM yyyy")}</span>
+    <div className="space-y-5 sm:space-y-6 max-w-3xl mx-auto pb-8">
+      {/* HERO — gradient panel with avatar + greeting + name + plan badge.
+          Inspired by Apple Fitness / Strava profile cards: bold name,
+          status as the headline metric, gym ID accessible but not loud.
+          Gradient draws from emerald (active member = positive) but stays
+          subtle so the actual content reads first. */}
+      <section
+        aria-labelledby="portal-hero-name"
+        className="relative overflow-hidden rounded-2xl border bg-gradient-to-br from-emerald-500/15 via-card to-card p-5 sm:p-6"
+      >
+        <div className="flex flex-col items-center text-center sm:flex-row sm:items-center sm:text-left gap-4 sm:gap-5">
+          <Avatar className="size-16 sm:size-20 rounded-2xl after:rounded-2xl ring-4 ring-emerald-500/10 shrink-0">
+            {avatarUrl ? (
+              <AvatarImage
+                src={avatarUrl}
+                alt={heroName}
+                className="rounded-2xl"
+              />
+            ) : null}
+            <AvatarFallback
+              className={`rounded-2xl text-lg font-semibold text-white ${avatarColorClass(heroName)}`}
+            >
+              {initialsOf(heroName)}
+            </AvatarFallback>
+          </Avatar>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs sm:text-sm text-muted-foreground">
+              {greeting},
+            </p>
+            <h1
+              id="portal-hero-name"
+              className="text-xl sm:text-2xl font-semibold leading-tight mt-0.5 truncate"
+            >
+              {heroName}
+            </h1>
+            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mt-2">
+              <StatusPill variant="active">Active member</StatusPill>
+              <span className="text-xs text-muted-foreground">
+                Since {format(me.createdAt, "MMM yyyy")}
               </span>
             </div>
           </div>
         </div>
-        {/* Mobile: gym id copy widget below hero info */}
+
+        {/* Current plan + days remaining as a compact, prominent strip.
+            This IS the answer to "am I OK?" — the most-asked question
+            the portal needs to answer at a glance. */}
+        {current && (
+          <div className="mt-4 sm:mt-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-xl bg-card/60 backdrop-blur-sm border px-4 py-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="size-9 rounded-lg bg-sky-500/15 text-sky-500 flex items-center justify-center shrink-0">
+                <CalendarIcon className="size-4" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                  Current plan
+                </p>
+                <p className="text-sm font-semibold truncate">
+                  {current.planName}
+                </p>
+              </div>
+            </div>
+            <div className="text-center sm:text-right shrink-0">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                {nextPaymentDue ? "Next due" : "Days remaining"}
+              </p>
+              <p className="text-sm font-semibold tabular-nums">
+                {nextPaymentDue
+                  ? format(parseISO(nextPaymentDue), "MMM d, yyyy")
+                  : `${daysLeft ?? 0} day${daysLeft === 1 ? "" : "s"}`}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Gym ID copy widget — tucked into the hero so it's always
+            available without taking a row of its own. */}
         {me.gymId !== null && (
-          <div className="sm:hidden mt-4 flex justify-center">
+          <div className="mt-4 flex justify-center sm:justify-start">
             <GymIdCopy gymId={me.gymId} />
           </div>
         )}
-        </div>
-      </div>
+      </section>
 
-      {/* Stat cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          icon={Wallet}
-          label="Total paid"
-          value={`LKR ${totalPaid.toLocaleString()}`}
-          caption="Lifetime succeeded"
-          accentColor="green"
-        />
-        <StatCard
-          icon={Calendar}
-          label="Active membership"
-          value={current?.planName ?? "—"}
-          caption={activeMembershipCaption}
-          accentColor="blue"
-        />
-        <StatCard
-          icon={AlertCircle}
-          label="Outstanding"
-          value={
-            outstanding && Number(outstanding) > 0
-              ? `LKR ${Number(outstanding).toLocaleString()}`
-              : "Settled"
-          }
-          caption={
-            outstanding && Number(outstanding) > 0
-              ? "Visit front desk"
-              : "All clear"
-          }
-          accentColor={
-            outstanding && Number(outstanding) > 0 ? "red" : "green"
-          }
-        />
-        <StatCard
-          icon={Activity}
-          label="Total check-ins"
-          value={totalCheckins}
-          caption="Lifetime"
-          accentColor="amber"
-        />
-      </div>
-
-      {workoutPlanView && (
-        <div>
-          <h3 className="text-lg font-semibold mb-3">Workout plan</h3>
-          <Card>
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="size-10 rounded-lg bg-emerald-500/15 text-emerald-500 flex items-center justify-center shrink-0">
-                <FileText className="size-5" />
+      {/* ACTION BANNERS — only render when actionable. Stacking these
+          immediately under the hero is the "what should I do today?"
+          surface, like banking apps' alert cards or Apple Wallet's
+          notifications. */}
+      {(hasOutstanding || showRenewalWarning || workoutPlanView) && (
+        <div className="space-y-3">
+          {hasOutstanding && (
+            <div
+              role="alert"
+              className="rounded-xl border border-amber-500/40 bg-amber-50 dark:bg-amber-950/30 p-4 flex items-start gap-3"
+            >
+              <div className="size-9 rounded-lg bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                <AlertTriangle className="size-4" />
               </div>
               <div className="min-w-0 flex-1">
-                <div className="font-medium truncate">
-                  {workoutPlanView.fileName}
-                </div>
-                <div className="text-xs text-muted-foreground mt-0.5">
-                  Uploaded {format(workoutPlanView.createdAt, "PP")}
-                </div>
-                {(() => {
-                  const d = workoutPlanView.daysUntilExpiry;
-                  if (d < 0) {
-                    return (
-                      <div className="text-xs text-muted-foreground mt-0.5">
-                        Expired — ask your trainer to resend.
-                      </div>
-                    );
-                  }
-                  if (d === 0) {
-                    return (
-                      <div className="text-xs font-medium text-amber-600 dark:text-amber-400 mt-0.5">
-                        Expires today — download now
-                      </div>
-                    );
-                  }
-                  if (d === 1) {
-                    return (
-                      <div className="text-xs font-medium text-amber-600 dark:text-amber-400 mt-0.5">
-                        Expires tomorrow
-                      </div>
-                    );
-                  }
-                  return (
-                    <div className="text-xs text-muted-foreground mt-0.5">
-                      Expires in {d} days
-                    </div>
-                  );
-                })()}
+                <p className="text-sm font-semibold text-amber-900 dark:text-amber-100">
+                  Outstanding: LKR {Number(outstanding).toLocaleString()}
+                </p>
+                <p className="text-xs text-amber-800/80 dark:text-amber-200/80 mt-0.5">
+                  Visit the front desk to settle your dues.
+                </p>
               </div>
-              {workoutPlanView.daysUntilExpiry >= 0 && (
-                <div className="flex gap-2 shrink-0">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    render={
-                      <a
-                        href={workoutPlanView.viewUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      />
-                    }
-                  >
-                    <Eye className="size-4" />
-                    <span className="hidden sm:inline">View</span>
-                  </Button>
-                  <Button
-                    size="sm"
-                    className="bg-emerald-500 hover:bg-emerald-600 text-white"
-                    render={<a href={workoutPlanView.downloadUrl} />}
-                  >
-                    <Download className="size-4" />
-                    <span className="hidden sm:inline">Download</span>
-                  </Button>
+            </div>
+          )}
+          {showRenewalWarning && !hasOutstanding && (
+            <div
+              role="alert"
+              className="rounded-xl border border-sky-500/40 bg-sky-50 dark:bg-sky-950/30 p-4 flex items-start gap-3"
+            >
+              <div className="size-9 rounded-lg bg-sky-500/20 text-sky-600 dark:text-sky-400 flex items-center justify-center shrink-0">
+                <CalendarIcon className="size-4" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-sky-900 dark:text-sky-100">
+                  {daysLeft === 0
+                    ? "Your membership expires today"
+                    : `${daysLeft} ${daysLeft === 1 ? "day" : "days"} left on your membership`}
+                </p>
+                <p className="text-xs text-sky-800/80 dark:text-sky-200/80 mt-0.5">
+                  Visit the front desk to renew.
+                </p>
+              </div>
+            </div>
+          )}
+          {workoutPlanView && workoutPlanView.daysUntilExpiry >= 0 && (
+            <div className="rounded-xl border border-emerald-500/30 bg-emerald-50/50 dark:bg-emerald-950/20 p-4">
+              <div className="flex items-start gap-3">
+                <div className="size-9 rounded-lg bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                  <Sparkles className="size-4" />
                 </div>
-              )}
-            </CardContent>
-          </Card>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-emerald-900 dark:text-emerald-100">
+                    Your workout plan is ready
+                  </p>
+                  <p className="text-xs text-emerald-800/80 dark:text-emerald-200/80 mt-0.5 truncate">
+                    {workoutPlanView.fileName}
+                  </p>
+                  {workoutPlanView.daysUntilExpiry <= 1 && (
+                    <p className="text-xs font-medium text-amber-600 dark:text-amber-400 mt-1">
+                      {workoutPlanView.daysUntilExpiry === 0
+                        ? "Expires today — download now"
+                        : "Expires tomorrow"}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <div className="flex gap-2 mt-3 sm:mt-0 sm:absolute sm:right-4 sm:top-4 relative sm:relative">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1 sm:flex-initial"
+                  render={
+                    <a
+                      href={workoutPlanView.viewUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    />
+                  }
+                >
+                  <Eye className="size-4" />
+                  View
+                </Button>
+                <Button
+                  size="sm"
+                  className="flex-1 sm:flex-initial bg-emerald-500 hover:bg-emerald-600 text-white"
+                  render={<a href={workoutPlanView.downloadUrl} />}
+                >
+                  <Download className="size-4" />
+                  Download
+                </Button>
+              </div>
+            </div>
+          )}
+          {workoutPlanView && workoutPlanView.daysUntilExpiry < 0 && (
+            <div className="rounded-xl border bg-card p-4 flex items-start gap-3">
+              <div className="size-9 rounded-lg bg-muted text-muted-foreground flex items-center justify-center shrink-0">
+                <FileText className="size-4" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium">Workout plan expired</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Ask your trainer to resend it.
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
-      <div>
-        <h3 className="text-lg font-semibold mb-3">Attendance (last 30)</h3>
-
-        {/* Mobile: stacked cards */}
-        <div className="md:hidden space-y-2">
-          {attendanceRows.length === 0 ? (
-            <div className="rounded-lg border bg-card px-4 py-6 text-center text-sm text-muted-foreground">
-              No check-ins yet. Type your Gym ID at the front-desk kiosk to mark attendance.
-            </div>
-          ) : (
-            attendanceRows.map((r) => (
-              <div
-                key={r.id}
-                className="rounded-lg border bg-card px-3 py-2.5 flex items-center justify-between gap-3"
-              >
-                <div className="min-w-0 text-sm">
-                  <div className="font-medium">{formatSLDate(r.checkedInAt)}</div>
-                  <div className="text-xs text-muted-foreground mt-0.5">
-                    {formatSLTime(r.checkedInAt)}
-                  </div>
-                </div>
-                <Badge variant="outline" className="shrink-0">
-                  {r.source === "kiosk_id" ? "Kiosk" : r.source === "qr_scan" ? "QR scan" : "Manual"}
-                </Badge>
-              </div>
-            ))
-          )}
+      {/* STATS — 2x2 on mobile (compact glanceable grid, Apple Fitness
+          rings pattern), 4-col on desktop. */}
+      <section aria-label="Membership stats">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <StatCard
+            icon={Wallet}
+            label="Total paid"
+            value={`LKR ${totalPaid.toLocaleString()}`}
+            caption="Lifetime"
+            accentColor="green"
+          />
+          <StatCard
+            icon={CalendarIcon}
+            label="Plan"
+            value={current?.planName ?? "—"}
+            caption={activeMembershipCaption}
+            accentColor="blue"
+          />
+          <StatCard
+            icon={AlertCircle}
+            label="Outstanding"
+            value={
+              hasOutstanding
+                ? `LKR ${Number(outstanding).toLocaleString()}`
+                : "Settled"
+            }
+            caption={hasOutstanding ? "Action required" : "All clear"}
+            accentColor={hasOutstanding ? "red" : "green"}
+          />
+          <StatCard
+            icon={Activity}
+            label="Check-ins"
+            value={totalCheckins}
+            caption="Lifetime"
+            accentColor="amber"
+          />
         </div>
+      </section>
 
-        {/* Desktop: table */}
-        <div className="hidden md:block overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-48">Checked in at</TableHead>
-                <TableHead className="w-32">Source</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {attendanceRows.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={2} className="text-center text-muted-foreground py-6">
-                    No check-ins yet. Type your Gym ID at the front-desk kiosk to mark attendance.
-                  </TableCell>
-                </TableRow>
-              )}
-              {attendanceRows.map((r) => (
-                <TableRow key={r.id}>
-                  <TableCell>{formatSLDateTime(r.checkedInAt)}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline">
-                      {r.source === "kiosk_id" ? "Kiosk" : r.source === "qr_scan" ? "QR scan" : "Manual"}
-                    </Badge>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      </div>
+      {/* RECENT ACTIVITY — feed-style cards with friendly date labels
+          (Today / Yesterday / N days ago). Same activity-row pattern
+          used by Strava / Apple Fitness. Show-more caps initial render. */}
+      <section>
+        <h2 className="text-lg font-semibold mb-3">Recent activity</h2>
+        <RecentActivity rows={attendanceRows} />
+      </section>
 
-      <div>
-        <h3 className="text-lg font-semibold mb-3">Payment history</h3>
-
-        {/* Mobile: stacked cards. Five-column tables don't fit on phone
-            widths; the card layout keeps each payment legible and
-            scannable. */}
-        <div className="md:hidden space-y-2">
-          {paymentRows.length === 0 ? (
-            <div className="rounded-lg border bg-card px-4 py-6 text-center text-sm text-muted-foreground">
-              No payments yet.
-            </div>
-          ) : (
-            paymentRows.map((p) => {
-              const num = Number(p.amountLkr);
-              return (
-                <div
-                  key={p.id}
-                  className={`rounded-lg border bg-card px-3 py-2.5 ${
-                    p.status === "refunded" ? "opacity-70" : ""
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="text-sm font-medium tabular-nums">
-                        {num < 0 ? "-" : ""}LKR{" "}
-                        {Math.abs(num).toLocaleString()}
-                      </div>
-                      <div className="text-xs text-muted-foreground mt-0.5">
-                        {format(p.paidAt, "PP")} · {p.kind} · {p.method}
-                      </div>
-                    </div>
-                    <StatusPill variant={p.status}>{p.status}</StatusPill>
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
-
-        {/* Desktop: standard table, scrollable horizontally as a safety
-            net for unusually narrow desktop widths. */}
-        <div className="hidden md:block overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-32">Paid at</TableHead>
-                <TableHead className="w-28">Kind</TableHead>
-                <TableHead className="w-28">Method</TableHead>
-                <TableHead className="w-32 text-right">Amount (LKR)</TableHead>
-                <TableHead className="w-32">Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {paymentRows.length === 0 && (
-                <TableRow>
-                  <TableCell
-                    colSpan={5}
-                    className="text-center text-muted-foreground py-6"
-                  >
-                    No payments yet.
-                  </TableCell>
-                </TableRow>
-              )}
-              {paymentRows.map((p) => {
-                const num = Number(p.amountLkr);
-                return (
-                  <TableRow
-                    key={p.id}
-                    className={p.status === "refunded" ? "opacity-70" : ""}
-                  >
-                    <TableCell>{format(p.paidAt, "PP")}</TableCell>
-                    <TableCell>{p.kind}</TableCell>
-                    <TableCell>{p.method}</TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {num < 0 ? "-" : ""}
-                      {Math.abs(num).toLocaleString()}
-                    </TableCell>
-                    <TableCell>
-                      <StatusPill variant={p.status}>{p.status}</StatusPill>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </div>
-      </div>
+      {/* PAYMENT HISTORY — Stripe-style cards: amount as the
+          right-aligned eye-anchor, kind+method as muted metadata,
+          status pill nested below amount. Show-more caps initial render. */}
+      <section>
+        <h2 className="text-lg font-semibold mb-3">Payment history</h2>
+        <PaymentList rows={paymentRows} />
+      </section>
     </div>
   );
 }
