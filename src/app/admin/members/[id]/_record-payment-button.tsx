@@ -106,9 +106,14 @@ export function RecordPaymentButton({
       </Button>
 
       {/* Safeguard confirmation pop-up. Shown when the active membership is
-          at/past expiry — the wrong-button-wrong-action footgun window. */}
+          at/past expiry — the wrong-button-wrong-action footgun window.
+          Hero card design — colored wave top, floating icon at the dip,
+          centered headline + pill action buttons. */}
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent
+          className="p-0 overflow-hidden gap-0 sm:max-w-md border-0"
+          showCloseButton={false}
+        >
           {safeguard && (
             <RenewSafeguardContent
               state={safeguard}
@@ -164,14 +169,16 @@ export function RecordPaymentButton({
 /**
  * Content of the renewal-safeguard confirmation pop-up.
  *
- * Design intent — iOS / macOS confirmation alert pattern:
- *   - Centered icon to anchor the alert visually
- *   - Headline that names the consequence ("ends today")
- *   - Body that explains WHY this matters in plain language
- *   - Primary CTA = the recommended path (amber Renew)
- *   - Secondary CTA = "Continue with payment" (outline) for rare cases
- *     where admin really does want to record a payment on the dying cycle
- *     (e.g. logging a missed past-due payment)
+ * Design — hero alert card pattern (inspired by mobile-app confirmation
+ * UIs that lead with a strong color block and floating icon):
+ *   - Amber gradient top section with a wavy "smile" curve at the bottom
+ *   - White circle holding the AlertTriangle icon, straddling the curve's
+ *     dip apex — visually anchors the alert and connects the two sections
+ *   - Centered headline (amber color) that names the consequence
+ *   - Plain-language body explaining the why
+ *   - Two pill buttons at the bottom:
+ *       primary (amber, recommended) = Open Renew
+ *       secondary (outline) = Continue with payment (for edge cases)
  */
 function RenewSafeguardContent({
   state,
@@ -187,47 +194,85 @@ function RenewSafeguardContent({
   const plan = planName ?? "Membership";
   const headline =
     state === "expired"
-      ? `${plan} has already expired`
+      ? `${plan} expired`
       : state === "today"
-        ? `${plan} ends today`
+        ? `${plan} ends today!`
         : `${plan} ends tomorrow`;
 
   return (
-    <div className="text-center space-y-4 py-2">
-      <div className="mx-auto size-12 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center">
-        <AlertTriangle className="size-6" />
+    <>
+      {/* Required for a11y — visually hidden because we render our own headline. */}
+      <DialogTitle className="sr-only">
+        {headline} — did you mean to renew?
+      </DialogTitle>
+
+      {/* Wave top — single SVG with amber-gradient fill and a smile curve
+          at the bottom. The path dips at the center where the icon will sit. */}
+      <div className="relative">
+        <svg
+          viewBox="0 0 400 130"
+          preserveAspectRatio="none"
+          className="block w-full h-28"
+          aria-hidden="true"
+        >
+          <defs>
+            <linearGradient id="renewSafeguardGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#fbbf24" />
+              <stop offset="100%" stopColor="#f59e0b" />
+            </linearGradient>
+          </defs>
+          <path
+            fill="url(#renewSafeguardGrad)"
+            d="M 0,0 L 400,0 L 400,95 C 290,95 230,95 215,115 Q 200,130 185,115 C 170,95 110,95 0,95 Z"
+          />
+        </svg>
+        {/* Icon circle — centered on the dip apex (SVG bottom-center).
+            Half overlaps the amber zone, half hangs into the body. */}
+        <div
+          className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 size-14 rounded-full bg-popover flex items-center justify-center shadow-md ring-2 ring-amber-500/30"
+          style={{ top: "100%" }}
+        >
+          <AlertTriangle
+            className="size-7 text-amber-500"
+            strokeWidth={2.5}
+          />
+        </div>
       </div>
-      <div className="space-y-1.5">
-        <DialogTitle className="text-base font-semibold">
-          {headline} — did you mean to renew?
-        </DialogTitle>
-        <p className="text-sm text-muted-foreground">
+
+      {/* Body — padded above to clear the floating icon. */}
+      <div className="px-6 pt-10 pb-6 text-center">
+        <h2 className="text-xl font-bold text-amber-600 dark:text-amber-400 tracking-tight">
+          {headline}
+        </h2>
+        <p className="text-xs uppercase tracking-wider text-muted-foreground mt-1.5">
+          Did you mean to renew?
+        </p>
+        <p className="text-sm text-muted-foreground mt-3 max-w-sm mx-auto leading-relaxed">
           Recording a payment here{" "}
           <span className="font-medium text-foreground">won&apos;t extend</span>{" "}
           the membership. To start a new cycle, use{" "}
-          <span className="font-medium text-foreground">Renew membership</span>.
+          <span className="font-medium text-foreground">Renew membership</span>{" "}
+          instead.
         </p>
+        <div className="flex flex-col-reverse sm:flex-row gap-2.5 sm:gap-3 justify-center mt-6">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onContinue}
+            className="rounded-full px-5 sm:flex-initial border-foreground/20 hover:border-foreground/40 text-foreground"
+          >
+            Continue with payment
+          </Button>
+          <Button
+            type="button"
+            onClick={onSwitchToRenew}
+            className="rounded-full px-5 sm:flex-initial bg-amber-500 hover:bg-amber-600 text-white shadow-md"
+          >
+            Open Renew
+            <ArrowRight className="size-3.5" />
+          </Button>
+        </div>
       </div>
-      <div className="flex flex-col-reverse sm:flex-row sm:justify-center gap-2 pt-2">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={onContinue}
-          className="sm:flex-initial"
-        >
-          Continue with payment
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          onClick={onSwitchToRenew}
-          className="sm:flex-initial bg-amber-500 hover:bg-amber-600 text-white"
-        >
-          Open Renew instead
-          <ArrowRight className="size-3.5" />
-        </Button>
-      </div>
-    </div>
+    </>
   );
 }
