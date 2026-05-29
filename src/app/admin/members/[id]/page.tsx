@@ -5,9 +5,6 @@ import { profiles, memberships, plans, payments, attendance, workoutPlans } from
 import { eq, desc, count } from "drizzle-orm";
 import { requireAdminProfile } from "@/lib/auth";
 import { getCurrentMembership } from "@/lib/memberships/current";
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from "@/components/ui/table";
 import { format } from "date-fns";
 import { todayInSL } from "@/lib/tz";
 import { computeOutstanding } from "@/lib/payments/outstanding";
@@ -21,7 +18,6 @@ import { Wallet, Calendar, AlertCircle, Activity, Mail, Phone } from "lucide-rea
 import { AdminPage } from "@/components/admin/admin-page";
 import { StatCard } from "@/components/admin/stat-card";
 import { StatusPill } from "@/components/admin/status-pill";
-import { EmptyState } from "@/components/admin/empty-state";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { initialsOf } from "@/lib/initials";
 import { PaymentsTable } from "./_payments-table";
@@ -29,8 +25,8 @@ import { RecordPaymentButton } from "./_record-payment-button";
 import { AttendanceTable } from "./_attendance-table";
 import { SendWorkoutPlanButton } from "./_send-workout-plan-button";
 import { RenewMembershipButton } from "./_renew-button";
-import { CancelMembershipButton } from "./_cancel-membership-button";
 import { DeleteMemberButton } from "./_delete-member-button";
+import { MembershipHistory } from "./_membership-history";
 import { GymIdCopy } from "@/components/admin/gym-id-copy";
 import { ApproveButton } from "@/app/admin/pending/_approve-button";
 import { RejectButton } from "@/app/admin/pending/_reject-button";
@@ -514,90 +510,11 @@ export default async function MemberDetailPage({
         {/* Membership history */}
         <div>
           <h3 className="text-lg font-semibold mb-3">Membership history</h3>
-          {history.length === 0 ? (
-            <div className="rounded-lg border bg-card">
-              <EmptyState icon={Calendar} title="No memberships yet" />
-            </div>
-          ) : (
-            <>
-              {/* Mobile: membership cards. Plan name + status header,
-                  date range as muted metadata, Cancel action at bottom on
-                  the still-active row. */}
-              <div className="sm:hidden space-y-2">
-                {history.map((h) => (
-                  <div
-                    key={h.id}
-                    className="rounded-xl border bg-card p-3 space-y-2"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="font-medium truncate">{h.planName}</div>
-                      <StatusPill variant={h.status}>{h.status}</StatusPill>
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {format(new Date(h.startDate), "MMM d, yyyy")}
-                      {" – "}
-                      {format(new Date(h.endDate), "MMM d, yyyy")}
-                    </div>
-                    {h.status === "active" && !wiped && (
-                      <div className="flex justify-end pt-1">
-                        <CancelMembershipButton
-                          memberId={member.id}
-                          membershipId={h.id}
-                        />
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              {/* Tablet / desktop: existing table. */}
-              <div className="hidden sm:block rounded-lg border bg-card overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Plan</TableHead>
-                      <TableHead>Start</TableHead>
-                      <TableHead>End</TableHead>
-                      <TableHead className="w-32">Status</TableHead>
-                      <TableHead className="w-28 text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {history.map((h) => (
-                      <TableRow key={h.id}>
-                        <TableCell className="font-medium">
-                          {h.planName}
-                        </TableCell>
-                        <TableCell>
-                          {format(new Date(h.startDate), "PP")}
-                        </TableCell>
-                        <TableCell>
-                          {format(new Date(h.endDate), "PP")}
-                        </TableCell>
-                        <TableCell>
-                          <StatusPill variant={h.status}>{h.status}</StatusPill>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {/* Cancel button only on still-active rows. Expired
-                              and cancelled rows show a dash (no action). */}
-                          {h.status === "active" && !wiped ? (
-                            <CancelMembershipButton
-                              memberId={member.id}
-                              membershipId={h.id}
-                            />
-                          ) : (
-                            <span className="text-muted-foreground text-xs">
-                              —
-                            </span>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </>
-          )}
+          <MembershipHistory
+            history={history}
+            memberId={member.id}
+            wiped={wiped}
+          />
         </div>
 
         {/* Danger zone: hard-delete the member */}

@@ -5,19 +5,18 @@ export type StatCardAccent = "red" | "green" | "amber" | "blue" | "default";
 
 /**
  * Pick a font size for the value based on its rendered character length.
- * Short values get the standard text-2xl; longer ones step down so the
- * full string still fits inside a 4-up card grid without wrapping or
- * truncating, even at the narrow viewports where each card is ~200px
- * (e.g. desktop with DevTools open, or the portal's 4-col layout at
- * lg breakpoint).
+ * Tightened breakpoints (after seeing "LKR 5,499.99" truncate on tablet
+ * 2-col layout where each card is ~165px wide). Cards step down faster
+ * so long strings fit even in the worst-case narrow card.
  */
 function valueFontSize(value: string | number): string {
   const len = String(value).length;
-  if (len <= 8) return "text-2xl";  // "LKR 999"
-  if (len <= 11) return "text-xl";  // "LKR 9,999"
-  if (len <= 14) return "text-lg";  // "LKR 99,999.99"
-  if (len <= 18) return "text-base"; // "LKR 999,999.99"
-  return "text-sm";                  // 1M+ with decimals — still readable
+  if (len <= 5) return "text-2xl";   // "LKR 9"
+  if (len <= 8) return "text-xl";    // "LKR 999"
+  if (len <= 11) return "text-lg";   // "LKR 9,999"
+  if (len <= 14) return "text-base"; // "LKR 99,999.99"
+  if (len <= 18) return "text-sm";   // "LKR 999,999.99"
+  return "text-xs";                  // 1M+ with decimals — still readable
 }
 
 /**
@@ -60,21 +59,21 @@ export function StatCard({
     <div
       data-slot="stat-card"
       className={cn(
-        "rounded-xl border p-5 flex items-start gap-4 transition-colors",
+        "rounded-xl border p-3 sm:p-5 flex items-start gap-2.5 sm:gap-4 transition-colors",
         cardSurface[accentColor],
         className,
       )}
     >
       <div
         className={cn(
-          "size-10 rounded-lg flex items-center justify-center shrink-0",
+          "size-9 sm:size-10 rounded-lg flex items-center justify-center shrink-0",
           iconBg[accentColor],
         )}
       >
-        <Icon className="size-5" />
+        <Icon className="size-4 sm:size-5" />
       </div>
       <div className="flex-1 min-w-0">
-        <div className="text-xs uppercase tracking-wide text-muted-foreground">
+        <div className="text-[0.65rem] sm:text-xs uppercase tracking-wide text-muted-foreground">
           {label}
         </div>
         {/* Auto-shrink the value font based on string length so long
