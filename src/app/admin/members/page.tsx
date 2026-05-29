@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { MemberFilters } from "./_filters";
+import { NavPendingProvider, ListArea } from "./_nav-pending";
 import { AdminPage } from "@/components/admin/admin-page";
 import { StatusPill } from "@/components/admin/status-pill";
 import { MemberAvatar } from "@/components/admin/member-avatar";
@@ -125,11 +126,13 @@ export default async function MembersPage({
 
   return (
     <AdminPage breadcrumbs={[{ label: "Members" }]}>
+      <NavPendingProvider>
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <h2 className="text-2xl font-semibold">Members</h2>
         </div>
         <MemberFilters status={status} q={q} />
+        <ListArea>
         {rows.length === 0 ? (
           <div className="rounded-lg border bg-card">
             <EmptyState
@@ -297,7 +300,9 @@ export default async function MembersPage({
             )}
           </div>
         )}
+        </ListArea>
       </div>
+      </NavPendingProvider>
     </AdminPage>
   );
 }

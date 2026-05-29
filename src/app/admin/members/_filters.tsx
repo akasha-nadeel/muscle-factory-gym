@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useOptimistic, useState, useTransition } from "react";
+import { useOptimistic, useState } from "react";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -11,6 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { useNavPending } from "./_nav-pending";
 
 const STATUS_OPTIONS = [
   { v: "all", label: "All" },
@@ -29,7 +30,10 @@ export function MemberFilters({
   const router = useRouter();
   const searchParams = useSearchParams();
   const [text, setText] = useState(q);
-  const [pending, startTransition] = useTransition();
+  // Shared transition state with the list area below — pending here also
+  // dims+spinners the list, giving the user a clear "we're loading" cue
+  // while the new server-rendered page is in flight.
+  const { pending, startTransition } = useNavPending();
   // Optimistic active state. Without this, the segmented control feels
   // sluggish — it has to wait for a server round-trip + RSC re-render
   // before the highlighted segment moves. With useOptimistic, the active
