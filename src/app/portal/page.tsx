@@ -310,11 +310,14 @@ export default async function PortalHome() {
             This IS the answer to "am I OK?" — the most-asked question
             the portal needs to answer at a glance. */}
         {current && (
-          <div className="mt-4 sm:mt-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-xl bg-card/60 backdrop-blur-sm border px-4 py-3">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="size-9 rounded-lg bg-sky-500/15 text-sky-500 flex items-center justify-center shrink-0">
-                <CalendarIcon className="size-4" />
-              </div>
+          <div className="mt-4 sm:mt-5 flex items-start sm:items-center gap-3 rounded-xl bg-card/60 backdrop-blur-sm border px-4 py-3">
+            <div className="size-9 rounded-lg bg-sky-500/15 text-sky-500 flex items-center justify-center shrink-0 mt-0.5 sm:mt-0">
+              <CalendarIcon className="size-4" />
+            </div>
+            {/* Both label/value pairs share one left edge: stacked on mobile
+                (so "Current plan" and "Next due" line up under the icon),
+                a justified row on desktop. */}
+            <div className="flex-1 min-w-0 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
               <div className="min-w-0">
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">
                   Current plan
@@ -323,16 +326,16 @@ export default async function PortalHome() {
                   {current.planName}
                 </p>
               </div>
-            </div>
-            <div className="text-center sm:text-right shrink-0">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                {nextPaymentDue ? "Next due" : "Days remaining"}
-              </p>
-              <p className="text-sm font-semibold tabular-nums">
-                {nextPaymentDue
-                  ? format(parseISO(nextPaymentDue), "MMM d, yyyy")
-                  : `${daysLeft ?? 0} day${daysLeft === 1 ? "" : "s"}`}
-              </p>
+              <div className="min-w-0 sm:text-right">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                  {nextPaymentDue ? "Next due" : "Days remaining"}
+                </p>
+                <p className="text-sm font-semibold tabular-nums">
+                  {nextPaymentDue
+                    ? format(parseISO(nextPaymentDue), "MMM d, yyyy")
+                    : `${daysLeft ?? 0} day${daysLeft === 1 ? "" : "s"}`}
+                </p>
+              </div>
             </div>
           </div>
         )}
