@@ -1,3 +1,5 @@
+import Image from "next/image";
+import Link from "next/link";
 import { requireMember } from "@/lib/auth";
 import { UserButton } from "@clerk/nextjs";
 
@@ -25,7 +27,19 @@ export default async function PortalLayout({
         suppressHydrationWarning
       />
       <div className="min-h-screen flex flex-col bg-background text-foreground">
-        <header className="h-14 flex items-center justify-end px-5 sm:px-6 md:px-8">
+        <header className="h-14 flex items-center justify-between px-5 sm:px-6 md:px-8">
+          {/* Brand logo, top-left. Portal is always dark, so the logo's
+              white+red rendering is correct with no light-mode filter. */}
+          <Link href="/portal" aria-label="Muscle Factory Gym home">
+            <Image
+              src="/logo.webp"
+              alt="Muscle Factory Gym"
+              width={180}
+              height={42}
+              priority
+              className="h-7 sm:h-[34px] w-auto"
+            />
+          </Link>
           <UserButton
             appearance={{
               elements: {
