@@ -4,17 +4,33 @@ import type { LucideIcon } from "lucide-react";
 export type StatCardAccent = "red" | "green" | "amber" | "blue" | "default";
 
 /**
- * Worst-case length-based floor — combined with container queries on the
- * card, this guarantees values like "LKR 9,999,999.99" (16 chars) still
- * fit even in the most cramped grid (e.g. 4-col with DevTools open).
- * Container queries handle the upscaling; this prevents over-scaling.
+ * Length-keyed font sizing that pairs with @container on the card root.
+ * Returns the COMPLETE size stack (base + container query upscales) so
+ * short values get prominent treatment AND long values cap low enough
+ * to fit in narrow grids.
+ *
+ * Examples:
+ *  - "3" (1 char) → text-2xl baseline, text-3xl when card has room
+ *  - "Monthly" (7 chars) → text-lg baseline, scales up to text-2xl
+ *  - "LKR 5,499.99" (12 chars) → text-base baseline, up to text-2xl
+ *  - "LKR 9,999,999.99" (16 chars) → text-sm baseline, caps at text-lg
  */
-function valueMaxSizeClass(value: string | number): string {
+function valueSizeClass(value: string | number): string {
   const len = String(value).length;
-  if (len <= 6) return ""; // any container size
-  if (len <= 9) return "@[12rem]:text-lg @[16rem]:text-xl @[20rem]:text-2xl";
-  if (len <= 12) return "@[14rem]:text-base @[18rem]:text-lg @[22rem]:text-xl";
-  return "@[16rem]:text-sm @[20rem]:text-base @[24rem]:text-lg";
+  // Very short — always large; "3" / "0" should dominate the card.
+  if (len <= 3) return "text-2xl @[14rem]:text-3xl";
+  // Short — "LKR 0", "Done"
+  if (len <= 6) return "text-xl @[10rem]:text-2xl @[16rem]:text-3xl";
+  // Short-medium — "Monthly", "Settled", "LKR 999"
+  if (len <= 9) return "text-lg @[10rem]:text-xl @[14rem]:text-2xl";
+  // Medium — "LKR 1,000.50", "LKR 5,499.99"
+  if (len <= 12)
+    return "text-base @[12rem]:text-lg @[16rem]:text-xl @[20rem]:text-2xl";
+  // Long — "LKR 25,332.63", "LKR 99,999.99"
+  if (len <= 15)
+    return "text-sm @[14rem]:text-base @[18rem]:text-lg @[22rem]:text-xl";
+  // Very long — "LKR 1,234,567.89"+
+  return "text-sm @[18rem]:text-base @[22rem]:text-lg";
 }
 
 /**
@@ -77,16 +93,15 @@ export function StatCard({
         <div className="text-[0.65rem] uppercase tracking-wide text-muted-foreground truncate">
           {label}
         </div>
-        {/* Value font scales with container width via @container queries.
-            Base = text-sm (always fits, even at 100px content width).
-            Upscales via the length-keyed thresholds in valueMaxSizeClass —
-            short values can go up to text-2xl when there's room; long
-            values cap lower to avoid overflow. truncate is the final
-            safety net for anything unexpectedly long. */}
+        {/* Value font scales with the card's own width via @container
+            queries. Length-keyed baseline ensures short values like "3"
+            or "0" are visually prominent (text-2xl) while long values
+            like "LKR 9,999,999.99" cap low enough to fit. truncate is
+            the final safety net. */}
         <div
           className={cn(
-            "font-semibold tabular-nums mt-1 whitespace-nowrap truncate text-sm",
-            valueMaxSizeClass(value),
+            "font-semibold tabular-nums mt-1 whitespace-nowrap truncate",
+            valueSizeClass(value),
           )}
         >
           {value}
