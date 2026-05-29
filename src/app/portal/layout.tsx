@@ -1,17 +1,14 @@
 import { requireMember } from "@/lib/auth";
 import { UserButton } from "@clerk/nextjs";
 
-// Same inline theme-init script as admin/auth/landing — apply dark by default
-// unless localStorage says otherwise. Runs before React hydrates so there's
-// no flash of light theme on cold load.
+// The member portal is ALWAYS dark — it has no theme toggle and a single
+// consistent dark look is the intended design. Force the `dark` class
+// regardless of any localStorage `theme` value (which can be left as
+// 'light' from the admin UI's toggle in a shared browser, which was
+// flipping the portal to light). Runs before hydration → no flash.
 const themeInitScript = `
 (function() {
-  try {
-    var t = localStorage.getItem('theme');
-    if (t !== 'light') document.documentElement.classList.add('dark');
-  } catch (e) {
-    document.documentElement.classList.add('dark');
-  }
+  document.documentElement.classList.add('dark');
 })();
 `;
 
