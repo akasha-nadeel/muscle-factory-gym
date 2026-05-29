@@ -19,7 +19,7 @@ import { StatusPill } from "@/components/admin/status-pill";
 import { MemberAvatar } from "@/components/admin/member-avatar";
 import { EmptyState } from "@/components/admin/empty-state";
 import { SortHeader } from "@/components/admin/sort-header";
-import { Users } from "lucide-react";
+import { Users, ChevronRight } from "lucide-react";
 import {
   parseSortParams,
   nextSortFor,
@@ -130,8 +130,8 @@ export default async function MembersPage({
           <h2 className="text-2xl font-semibold">Members</h2>
         </div>
         <MemberFilters status={status} q={q} />
-        <div className="rounded-lg border bg-card">
-          {rows.length === 0 ? (
+        {rows.length === 0 ? (
+          <div className="rounded-lg border bg-card">
             <EmptyState
               icon={Users}
               title="No members match your filters"
@@ -141,39 +141,55 @@ export default async function MembersPage({
                   : "Once new members sign up and you approve them, they'll appear here."
               }
             />
-          ) : (
+          </div>
+        ) : (
           <>
-          {/* Mobile: stacked cards (<sm) */}
-          <ul className="sm:hidden divide-y">
-            {rows.map((m) => (
-              <li key={m.id} className="p-3">
-                <Link
-                  href={`/admin/members/${m.id}`}
-                  className="flex items-center gap-3"
-                >
-                  <MemberAvatar
-                    size="md"
-                    fullName={m.fullName}
-                    photoUrl={m.photoUrl}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium truncate">{displayName(m.fullName)}</span>
+            {/* Mobile: discrete tappable cards (<sm).
+                Senior pattern: row layout with name+meta on the left,
+                status pill on the RIGHT (separated from name to reduce
+                visual competition), and a ChevronRight to signal tap
+                affordance — the iOS Settings + Stripe Customers pattern.
+                Each card is its own surface (bg-card + border) with
+                active:bg-accent for clear touch feedback. */}
+            <ul className="sm:hidden space-y-2">
+              {rows.map((m) => (
+                <li key={m.id}>
+                  <Link
+                    href={`/admin/members/${m.id}`}
+                    className="flex items-center gap-3 p-3 rounded-xl bg-card border hover:bg-accent active:bg-accent/80 transition-colors"
+                  >
+                    <MemberAvatar
+                      size="md"
+                      fullName={m.fullName}
+                      photoUrl={m.photoUrl}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium truncate">
+                        {displayName(m.fullName)}
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1.5 min-w-0">
+                        {m.gymId !== null && (
+                          <span className="font-mono tabular-nums shrink-0">
+                            #{m.gymId}
+                          </span>
+                        )}
+                        <span className="truncate">{m.email}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
                       <StatusPill variant={m.status}>{m.status}</StatusPill>
+                      <ChevronRight
+                        aria-hidden="true"
+                        className="size-4 text-muted-foreground"
+                      />
                     </div>
-                    <div className="text-xs text-muted-foreground truncate mt-0.5">
-                      {m.gymId !== null && (
-                        <span className="font-mono mr-2">#{m.gymId}</span>
-                      )}
-                      {m.email}
-                    </div>
-                  </div>
-                </Link>
-              </li>
-            ))}
-          </ul>
-          {/* Desktop: table (sm+) */}
-          <div className="hidden sm:block">
+                  </Link>
+                </li>
+              ))}
+            </ul>
+            {/* Desktop: table (sm+) — wrapped in card surface to match the
+                rest of the admin shell. */}
+            <div className="hidden sm:block rounded-lg border bg-card">
             <Table>
             <TableHeader>
               <TableRow>
@@ -244,10 +260,9 @@ export default async function MembersPage({
               ))}
             </TableBody>
           </Table>
-          </div>
+            </div>
           </>
-          )}
-        </div>
+        )}
         {total > 0 && (
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 text-sm text-muted-foreground">
             <span>

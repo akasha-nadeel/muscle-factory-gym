@@ -37,7 +37,12 @@ function formatLkr(amount: number): string {
  * one flow. Single dialog with two phases so there's only ever one modal
  * on screen — Escape and "Change member" share the same mental model.
  */
-export function RecordPaymentModal() {
+export function RecordPaymentModal({
+  className,
+}: {
+  /** Forwarded to the trigger button so callers can size it within their layout. */
+  className?: string;
+} = {}) {
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<MemberResult | null>(null);
 
@@ -51,7 +56,10 @@ export function RecordPaymentModal() {
       <Button
         size="sm"
         onClick={() => setOpen(true)}
-        className="bg-orange-600 text-white hover:bg-orange-700 dark:bg-orange-600 dark:hover:bg-orange-500"
+        className={cn(
+          "bg-orange-600 text-white hover:bg-orange-700 dark:bg-orange-600 dark:hover:bg-orange-500",
+          className,
+        )}
       >
         <Wallet className="size-4" />
         Record payment

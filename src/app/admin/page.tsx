@@ -200,30 +200,36 @@ export default async function AdminHome({
 
   return (
     <AdminPage breadcrumbs={[{ label: "Dashboard" }]}>
-      <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-          <div>
-            <h2 className="text-2xl font-semibold">Welcome, {greetingName}</h2>
+      <div className="space-y-4 sm:space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
+          <div className="min-w-0">
+            <h2 className="text-xl sm:text-2xl font-semibold truncate">
+              Welcome, {greetingName}
+            </h2>
             <p className="text-muted-foreground text-sm mt-1">
               Here&apos;s what&apos;s happening at the gym today.
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <RecordPaymentModal />
+          {/* Action buttons: full-width row on mobile (large thumb targets),
+              auto-width inline on tablet+. flex-1 splits the row evenly
+              between Record payment + Approve pending. */}
+          <div className="flex flex-row gap-2 w-full sm:w-auto">
+            <RecordPaymentModal className="flex-1 sm:flex-initial" />
             <Button
               variant="outline"
               size="sm"
               render={<Link href="/admin/pending" />}
-              className={
+              className={cn(
+                "relative flex-1 sm:flex-initial",
                 pendingCount > 0
                   ? // Has work to do: amber accent draws the admin's eye without
                     // competing with the orange primary CTA next to it.
-                    "relative bg-amber-50 border-amber-500/50 text-amber-900 hover:bg-amber-100 hover:border-amber-500/70 dark:bg-amber-950/30 dark:border-amber-500/40 dark:text-amber-100 dark:hover:bg-amber-950/50"
+                    "bg-amber-50 border-amber-500/50 text-amber-900 hover:bg-amber-100 hover:border-amber-500/70 dark:bg-amber-950/30 dark:border-amber-500/40 dark:text-amber-100 dark:hover:bg-amber-950/50"
                   : // All caught up: neutral surface with subtle fill so it
                     // stands on its own next to the orange primary instead of
                     // looking ghosted in dark mode.
-                    "relative bg-card hover:bg-muted dark:bg-card dark:hover:bg-muted/50"
-              }
+                    "bg-card hover:bg-muted dark:bg-card dark:hover:bg-muted/50",
+              )}
             >
               <UserPlus className="size-4" />
               Approve pending
@@ -244,22 +250,26 @@ export default async function AdminHome({
             full real estate; trend pill gives one-glance context vs the
             previous month; "View Reports →" makes the connection to the
             full reports page obvious. */}
-        <div className="rounded-2xl border bg-gradient-to-br from-sky-500/10 via-card to-card p-5 sm:p-6">
-          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="size-11 rounded-xl bg-sky-500/20 text-sky-500 flex items-center justify-center shrink-0">
+        <div className="rounded-2xl border bg-gradient-to-br from-sky-500/10 via-card to-card p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <div className="size-10 sm:size-11 rounded-xl bg-sky-500/20 text-sky-500 flex items-center justify-center shrink-0">
                 <Wallet className="size-5" />
               </div>
-              <div>
+              <div className="min-w-0 flex-1">
                 <div className="text-xs uppercase tracking-wide text-muted-foreground">
                   Total revenue · This month
                 </div>
-                <div className="text-3xl sm:text-4xl font-semibold tabular-nums mt-1 whitespace-nowrap">
+                {/* truncate (not whitespace-nowrap) — long numbers like
+                    "LKR 1,234,567.89" would otherwise overflow a 320px
+                    mobile screen. text-2xl on mobile keeps it dense; bumps
+                    to text-3xl/4xl as space allows. */}
+                <div className="text-2xl sm:text-3xl md:text-4xl font-semibold tabular-nums mt-1 truncate">
                   {formatLkrFull(revenue)}
                 </div>
               </div>
             </div>
-            <div className="flex flex-col items-start sm:items-end gap-2 shrink-0">
+            <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-3 sm:gap-2 shrink-0 w-full sm:w-auto">
               {revenueDeltaPct !== null && (
                 <span
                   className={cn(
@@ -289,10 +299,11 @@ export default async function AdminHome({
           </div>
         </div>
 
-        {/* Operational counts — these answer "do I need to act?" Three
-            equal-weight cards is the right density now that revenue has
-            its own hero. */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {/* Operational counts — these answer "do I need to act?". On mobile,
+            Active + Pending sit side-by-side (compact glanceable pair) and
+            Outstanding spans the full width below so its LKR figure has
+            room to breathe. Tablet+ goes to even 3-col. */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
           <StatCard
             icon={Users}
             label="Active members"
@@ -309,7 +320,7 @@ export default async function AdminHome({
           />
           <Link
             href="/admin/outstanding"
-            className="rounded-lg ring-offset-background transition-colors hover:[&_[data-slot=stat-card]]:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="col-span-2 sm:col-span-1 rounded-lg ring-offset-background transition-colors hover:[&_[data-slot=stat-card]]:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             aria-label="View outstanding dues breakdown"
           >
             <StatCard

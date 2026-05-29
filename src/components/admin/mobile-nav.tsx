@@ -48,17 +48,24 @@ export function MobileNav({ pendingCount }: { pendingCount?: number }) {
 
       {open && (
         <div className="fixed inset-0 z-50 md:hidden">
+          {/* Backdrop covers the screen below the panel and dismisses on tap. */}
           <div
             className="absolute inset-0 bg-black/60"
             onClick={() => setOpen(false)}
             aria-hidden="true"
           />
+          {/* Top-anchored drop-down panel.
+              Senior pattern: nav drops down from the top edge (full-width)
+              instead of sliding in from the side. Keeps the gym brand
+              (logo + dark surface) anchored where the page header already
+              sat, so the menu feels like the header expanding open. The
+              slide-down animation makes the open feel intentional. */}
           <aside
             role="dialog"
             aria-modal="true"
-            className="dark absolute inset-y-0 left-0 w-64 bg-sidebar text-sidebar-foreground border-r border-sidebar-border flex flex-col shadow-xl"
+            className="dark absolute inset-x-0 top-0 bg-sidebar text-sidebar-foreground border-b border-sidebar-border flex flex-col shadow-2xl max-h-[85vh] overflow-y-auto animate-in slide-in-from-top duration-200"
           >
-            <div className="h-14 px-4 border-b border-sidebar-border flex items-center justify-between gap-2">
+            <div className="h-14 px-4 border-b border-sidebar-border flex items-center justify-between gap-2 shrink-0">
               <Image
                 src="/logo.webp"
                 alt="Muscle Factory Gym"
@@ -71,7 +78,7 @@ export function MobileNav({ pendingCount }: { pendingCount?: number }) {
                 type="button"
                 aria-label="Close menu"
                 onClick={() => setOpen(false)}
-                className="inline-flex items-center justify-center size-8 rounded-md hover:bg-sidebar-accent"
+                className="inline-flex items-center justify-center size-9 rounded-md hover:bg-sidebar-accent"
               >
                 <X className="size-5" />
               </button>

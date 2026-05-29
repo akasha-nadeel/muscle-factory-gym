@@ -286,7 +286,11 @@ export default async function ReportsPage({
                     ? "No refunds issued"
                     : `${refundCount} refund${refundCount === 1 ? "" : "s"}`
                 }
-                accentColor={totalRefunds > 0 ? "amber" : "default"}
+                // Always amber — refunds are money leaving the gym, that's
+                // the right semantic regardless of magnitude. Mirrors the
+                // dashboard's "Pending approvals" card which is also amber
+                // (attention/awareness, not error).
+                accentColor="amber"
               />
               <StatCard
                 icon={Calendar}
@@ -297,7 +301,9 @@ export default async function ReportsPage({
                     ? "1 month with activity"
                     : `${monthCount} months with activity`
                 }
-                accentColor="default"
+                // Blue = informational/financial — same color the dashboard
+                // uses for its revenue stat surfaces.
+                accentColor="blue"
               />
               <StatCard
                 icon={BarChart3}
@@ -310,7 +316,9 @@ export default async function ReportsPage({
                       ? new Date().getMonth() + 1
                       : monthCount
                 }`}
-                accentColor="default"
+                // Green = positive consistency metric; matches the
+                // dashboard's "Active members" card semantically.
+                accentColor="green"
               />
             </div>
 
