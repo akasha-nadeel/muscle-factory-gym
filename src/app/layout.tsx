@@ -1,7 +1,8 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Toaster } from "@/components/ui/sonner";
+import { PwaRegister } from "@/components/pwa-register";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -15,8 +16,21 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Gym Management",
+  title: "Muscle Factory Gym",
   description: "Single-gym membership, payments, and check-in.",
+  // Lets iOS treat an installed copy as a standalone app (no Safari chrome).
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Muscle Factory",
+  },
+};
+
+// themeColor lives in the viewport export in this Next version (moved out of
+// metadata). Dark to match the app's theme — tints the installed window's
+// title bar and the mobile address bar.
+export const viewport: Viewport = {
+  themeColor: "#0a0a0a",
 };
 
 export default function RootLayout({
@@ -61,6 +75,7 @@ export default function RootLayout({
           </svg>
           {children}
           <Toaster richColors position="top-right" />
+          <PwaRegister />
         </body>
       </html>
     </ClerkProvider>
