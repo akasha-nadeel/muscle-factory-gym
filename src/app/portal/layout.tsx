@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { requireMember } from "@/lib/auth";
 import { UserButton } from "@clerk/nextjs";
+import { currentUser } from "@clerk/nextjs/server";
 
 // The member portal is ALWAYS dark — it has no theme toggle and a single
 // consistent dark look is the intended design. Force the `dark` class
@@ -20,6 +21,14 @@ export default async function PortalLayout({
   children: React.ReactNode;
 }) {
   await requireMember();
+  // Live name from the Clerk session for the header pill. Non-fatal — falls
+  // back to "Member" if Clerk is briefly unreachable.
+  const clerkUser = await currentUser().catch(() => null);
+  const name =
+    [clerkUser?.firstName, clerkUser?.lastName]
+      .filter(Boolean)
+      .join(" ")
+      .trim() || "Member";
   return (
     <>
       <script
@@ -40,14 +49,22 @@ export default async function PortalLayout({
               className="h-7 sm:h-[34px] w-auto"
             />
           </Link>
-          <UserButton
-            appearance={{
-              elements: {
-                userButtonAvatarBox: "!size-11 sm:!size-8",
-                avatarBox: "!size-11 sm:!size-8",
-              },
-            }}
-          />
+          {/* Name + avatar in a dark rounded pill. Name truncates so the
+              pill stays compact on mobile next to the logo. Only the avatar
+              (UserButton) is interactive — it opens the account menu. */}
+          <div className="flex items-center gap-2 rounded-full border border-border/60 bg-card py-1 pl-3.5 pr-1 shadow-sm">
+            <span className="text-sm font-medium text-foreground truncate max-w-[100px] sm:max-w-[160px]">
+              {name}
+            </span>
+            <UserButton
+              appearance={{
+                elements: {
+                  userButtonAvatarBox: "!size-9 sm:!size-8",
+                  avatarBox: "!size-9 sm:!size-8",
+                },
+              }}
+            />
+          </div>
         </header>
         <main className="flex-1 overflow-y-auto">
           <div className="max-w-5xl mx-auto w-full p-4 md:p-6">{children}</div>
