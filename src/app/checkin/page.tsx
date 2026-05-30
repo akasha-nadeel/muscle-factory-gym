@@ -84,7 +84,7 @@ export default async function CheckinKioskPage() {
                     </span>{" "}
                     the{" "}
                     <span className="text-sm font-semibold text-foreground">
-                      Camera app
+                      Camera
                     </span>
                     , not a QR-scanner app.
                   </p>
