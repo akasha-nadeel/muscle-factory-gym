@@ -78,15 +78,8 @@ export default async function CheckinKioskPage() {
                 <div className="min-w-0">
                   <p className="text-sm font-semibold leading-tight">iPhone</p>
                   <p className="text-xs text-muted-foreground mt-0.5 leading-snug">
-                    Scan with{" "}
-                    <span className="text-sm font-semibold text-foreground">
-                      only
-                    </span>{" "}
-                    the{" "}
-                    <span className="text-sm font-semibold text-foreground">
-                      Camera
-                    </span>
-                    , not a QR-scanner app.
+                    Open your Camera, point at the QR, then tap the yellow
+                    badge.
                   </p>
                 </div>
               </div>
