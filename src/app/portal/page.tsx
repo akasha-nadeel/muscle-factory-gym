@@ -263,91 +263,86 @@ export default async function PortalHome() {
 
   return (
     <div className="space-y-5 sm:space-y-6 max-w-3xl mx-auto pb-8">
-      {/* HERO — gradient panel with avatar + greeting + name + plan badge.
-          Inspired by Apple Fitness / Strava profile cards: bold name,
-          status as the headline metric, gym ID accessible but not loud.
-          Gradient draws from emerald (active member = positive) but stays
-          subtle so the actual content reads first. */}
+      {/* HERO — centered profile card matching the premium dark-app
+          pattern: small greeting label, big circular avatar with a soft
+          ring, bold name, muted email below, status pill + member-since.
+          Sits on the page background (no card wrapper) so the avatar
+          reads as the page focal point. */}
       <section
         aria-labelledby="portal-hero-name"
-        className="relative overflow-hidden rounded-2xl border bg-gradient-to-br from-emerald-500/15 via-card to-card p-5 sm:p-6"
+        className="text-center pt-2"
       >
-        <div className="flex flex-col items-center text-center sm:flex-row sm:items-center sm:text-left gap-4 sm:gap-5">
-          <Avatar className="size-16 sm:size-20 rounded-2xl after:rounded-2xl ring-4 ring-emerald-500/10 shrink-0">
+        <p className="text-xs sm:text-sm text-muted-foreground">
+          {greeting},
+        </p>
+        <div className="mt-4 flex justify-center">
+          <Avatar className="size-24 sm:size-28 rounded-full ring-4 ring-emerald-500/15 ring-offset-2 ring-offset-background">
             {avatarUrl ? (
               <AvatarImage
                 src={avatarUrl}
                 alt={heroName}
-                className="rounded-2xl"
+                className="rounded-full object-cover"
               />
             ) : null}
             <AvatarFallback
-              className={`rounded-2xl text-lg font-semibold text-white ${avatarColorClass(heroName)}`}
+              className={`rounded-full text-2xl sm:text-3xl font-semibold text-white ${avatarColorClass(heroName)}`}
             >
               {initialsOf(heroName)}
             </AvatarFallback>
           </Avatar>
-          <div className="min-w-0 flex-1">
-            <p className="text-xs sm:text-sm text-muted-foreground">
-              {greeting},
-            </p>
-            <h1
-              id="portal-hero-name"
-              className="text-xl sm:text-2xl font-semibold leading-tight mt-0.5 truncate"
-            >
-              {heroName}
-            </h1>
-            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mt-2">
-              <StatusPill variant="active">Active member</StatusPill>
-              <span className="text-xs text-muted-foreground">
-                Since {format(me.createdAt, "MMM yyyy")}
-              </span>
-            </div>
-          </div>
         </div>
-
-        {/* Current plan + days remaining as a compact, prominent strip.
-            This IS the answer to "am I OK?" — the most-asked question
-            the portal needs to answer at a glance. */}
-        {current && (
-          <div className="mt-4 sm:mt-5 flex items-start sm:items-center gap-3 rounded-xl bg-card/60 backdrop-blur-sm border px-4 py-3">
-            <div className="size-9 rounded-lg bg-sky-500/15 text-sky-500 flex items-center justify-center shrink-0 mt-0.5 sm:mt-0">
-              <CalendarIcon className="size-4" />
-            </div>
-            {/* Both label/value pairs share one left edge: stacked on mobile
-                (so "Current plan" and "Next due" line up under the icon),
-                a justified row on desktop. */}
-            <div className="flex-1 min-w-0 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-              <div className="min-w-0">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                  Current plan
-                </p>
-                <p className="text-sm font-semibold truncate">
-                  {current.planName}
-                </p>
-              </div>
-              <div className="min-w-0 sm:text-right">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                  {nextPaymentDue ? "Next due" : "Days remaining"}
-                </p>
-                <p className="text-sm font-semibold tabular-nums">
-                  {nextPaymentDue
-                    ? format(parseISO(nextPaymentDue), "MMM d, yyyy")
-                    : `${daysLeft ?? 0} day${daysLeft === 1 ? "" : "s"}`}
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Gym ID copy widget — tucked into the hero so it's always
-            available without taking a row of its own. */}
+        <h1
+          id="portal-hero-name"
+          className="mt-4 text-2xl sm:text-3xl font-semibold leading-tight"
+        >
+          {heroName}
+        </h1>
+        <p className="text-sm text-muted-foreground mt-1.5 max-w-xs mx-auto truncate px-4">
+          {me.email}
+        </p>
+        <div className="flex flex-wrap items-center justify-center gap-2 mt-3">
+          <StatusPill variant="active">Active member</StatusPill>
+          <span className="text-xs text-muted-foreground">
+            Since {format(me.createdAt, "MMM yyyy")}
+          </span>
+        </div>
         {me.gymId !== null && (
-          <div className="mt-4 flex justify-center sm:justify-start">
+          <div className="mt-5 flex justify-center">
             <GymIdCopy gymId={me.gymId} />
           </div>
         )}
       </section>
+
+      {/* Plan strip — its own glass card now, separated from the hero so
+          it reads as structured info rather than part of the personal
+          identity card. */}
+      {current && (
+        <div className="flex items-start sm:items-center gap-3 rounded-2xl bg-card/60 backdrop-blur-sm border px-4 py-3.5">
+          <div className="size-9 rounded-lg bg-sky-500/15 text-sky-500 flex items-center justify-center shrink-0 mt-0.5 sm:mt-0">
+            <CalendarIcon className="size-4" />
+          </div>
+          <div className="flex-1 min-w-0 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+            <div className="min-w-0">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                Current plan
+              </p>
+              <p className="text-sm font-semibold truncate">
+                {current.planName}
+              </p>
+            </div>
+            <div className="min-w-0 sm:text-right">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                {nextPaymentDue ? "Next due" : "Days remaining"}
+              </p>
+              <p className="text-sm font-semibold tabular-nums">
+                {nextPaymentDue
+                  ? format(parseISO(nextPaymentDue), "MMM d, yyyy")
+                  : `${daysLeft ?? 0} day${daysLeft === 1 ? "" : "s"}`}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ACTION BANNERS — only render when actionable. Stacking these
           immediately under the hero is the "what should I do today?"
