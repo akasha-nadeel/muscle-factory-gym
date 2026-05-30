@@ -2,7 +2,7 @@
 
 import { clerkClient } from "@clerk/nextjs/server";
 import { addDays, format, parseISO } from "date-fns";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq, gte } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { requireAdminProfile } from "@/lib/auth";
 import { db } from "@/db";
@@ -236,13 +236,25 @@ export async function _renewMembershipUnsafe(
     if (!v.ok) return { ok: false, error: "Renewal payment is invalid" };
   }
 
-  // Latest end date across all past memberships for this member.
-  // computeMembershipWindow's `startOn` is clamped to >= today, so a
-  // long-expired end_date naturally falls back to today (gap renewal).
+  // Latest end date among memberships that are CURRENTLY active.
+  // Stacking only makes sense when the member is presently covered by an
+  // active row — so a new cycle should sit back-to-back with it. We
+  // explicitly filter out cancelled rows: if an admin cancelled the
+  // previous membership and is now renewing, the new cycle must start
+  // today (no "free days" from the dead row's stale end_date). Expired
+  // rows are also excluded by the endDate >= today filter; if every past
+  // membership is gone, latest is undefined and computeMembershipWindow
+  // defaults to today.
   const [latest] = await db
     .select({ endDate: memberships.endDate })
     .from(memberships)
-    .where(eq(memberships.memberId, input.memberId))
+    .where(
+      and(
+        eq(memberships.memberId, input.memberId),
+        eq(memberships.status, "active"),
+        gte(memberships.endDate, input.today),
+      ),
+    )
     .orderBy(desc(memberships.endDate))
     .limit(1);
 

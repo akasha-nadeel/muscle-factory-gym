@@ -148,6 +148,43 @@ describe("_renewMembershipUnsafe", () => {
     expect(all[1].status).toBe("active");
   });
 
+  it("starts a new cycle TODAY when the previous membership was cancelled (no stacking on a dead row)", async () => {
+    // Regression: a cancelled membership's stale end_date used to leak
+    // into the renewal stacking math, giving the member "free days"
+    // between the cancellation and the dead row's end_date. After fix,
+    // cancelled rows are ignored and the new cycle starts today.
+    const member = await insertActiveProfile("cancelthenrenew");
+    const plan = await insertPlan({});
+    // Approved May 29; admin cancelled it on May 30.
+    await insertMembership({
+      memberId: member.id,
+      planId: plan.id,
+      startDate: "2026-05-29",
+      endDate: "2026-06-27",
+      status: "cancelled",
+    });
+
+    const r = await _renewMembershipUnsafe({
+      memberId: member.id,
+      planId: plan.id,
+      renewedByProfileId: member.id,
+      today: "2026-05-30",
+    });
+    expect(r.ok).toBe(true);
+
+    const fresh = await db
+      .select()
+      .from(memberships)
+      .where(eq(memberships.memberId, member.id))
+      .orderBy(memberships.startDate);
+    expect(fresh.length).toBe(2);
+    const active = fresh.find((m) => m.status === "active");
+    expect(active).toBeDefined();
+    // The cancelled row's end (Jun 27) is ignored; new cycle starts today.
+    expect(active!.startDate).toBe("2026-05-30");
+    expect(active!.endDate).toBe("2026-06-28");
+  });
+
   it("attaches the optional payment to the new membership row", async () => {
     const member = await insertActiveProfile("withpay");
     const plan = await insertPlan({});
