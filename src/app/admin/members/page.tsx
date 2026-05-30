@@ -1,8 +1,19 @@
 import Link from "next/link";
 import { db } from "@/db";
-import { profiles } from "@/db/schema";
-import { and, eq, ilike, or, count, asc, desc } from "drizzle-orm";
+import { profiles, memberships } from "@/db/schema";
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  gte,
+  ilike,
+  inArray,
+  or,
+} from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
+import { todayInSL } from "@/lib/tz";
 import { requireAdminProfile } from "@/lib/auth";
 import {
   Table,
@@ -93,6 +104,32 @@ export default async function MembersPage({
     .limit(PAGE_SIZE)
     .offset((page - 1) * PAGE_SIZE);
 
+  // Which of the listed members actually have a current paid membership.
+  // The profiles.status column says "approved or not" — it doesn't track
+  // whether the member's plan is live today. So an admin who cancels a
+  // member's only membership would still see them as "Active" forever
+  // unless we cross-check the memberships table. One small query keeps
+  // the list view honest; ~25 rows on a page, no N+1.
+  const today = todayInSL();
+  const rowIds = rows.map((r) => r.id);
+  const activeMemberIdSet =
+    rowIds.length > 0
+      ? new Set(
+          (
+            await db
+              .selectDistinct({ memberId: memberships.memberId })
+              .from(memberships)
+              .where(
+                and(
+                  inArray(memberships.memberId, rowIds),
+                  eq(memberships.status, "active"),
+                  gte(memberships.endDate, today),
+                ),
+              )
+          ).map((r) => r.memberId),
+        )
+      : new Set<string>();
+
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   function buildHref(overrides: {
@@ -180,7 +217,11 @@ export default async function MembersPage({
                       </div>
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
-                      <StatusPill variant={m.status}>{m.status}</StatusPill>
+                      {m.status === "active" && !activeMemberIdSet.has(m.id) ? (
+                        <StatusPill variant="expired">No plan</StatusPill>
+                      ) : (
+                        <StatusPill variant={m.status}>{m.status}</StatusPill>
+                      )}
                       <ChevronRight
                         aria-hidden="true"
                         className="size-4 text-muted-foreground"
@@ -244,7 +285,11 @@ export default async function MembersPage({
                   <TableCell className="font-medium">{displayName(m.fullName)}</TableCell>
                   <TableCell className="text-muted-foreground">{m.email}</TableCell>
                   <TableCell>
-                    <StatusPill variant={m.status}>{m.status}</StatusPill>
+                    {m.status === "active" && !activeMemberIdSet.has(m.id) ? (
+                        <StatusPill variant="expired">No plan</StatusPill>
+                      ) : (
+                        <StatusPill variant={m.status}>{m.status}</StatusPill>
+                      )}
                   </TableCell>
                   <TableCell className="text-muted-foreground">
                     {m.createdAt.toLocaleDateString()}

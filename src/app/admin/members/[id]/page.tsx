@@ -328,7 +328,7 @@ export default async function MemberDetailPage({
               Plan so a returning member's workflow flows left-to-right. */}
           {!wiped && (
             <div className="hidden sm:flex absolute bottom-4 right-4 gap-2">
-              {renewalUrgency && (
+              {renewalUrgency === "ending-soon" && (
                 <RenewMembershipButton
                   memberId={member.id}
                   memberName={member.fullName}
@@ -381,7 +381,16 @@ export default async function MemberDetailPage({
                 <h2 className="text-2xl font-semibold leading-tight break-words">
                   {heroName}
                 </h2>
-                <StatusPill variant={member.status}>{member.status}</StatusPill>
+                {/* Reflect real membership state: an "active" profile with
+                    no current paid membership (cancelled / expired) now
+                    shows "No plan" instead of a stale green "Active" pill. */}
+                {member.status === "active" && !current ? (
+                  <StatusPill variant="expired">No plan</StatusPill>
+                ) : (
+                  <StatusPill variant={member.status}>
+                    {member.status}
+                  </StatusPill>
+                )}
               </div>
               <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-5 gap-y-2 text-sm text-muted-foreground">
                 {!wiped && (
@@ -410,7 +419,7 @@ export default async function MemberDetailPage({
                 <GymIdCopy gymId={member.gymId} />
               </div>
             )}
-            {!wiped && renewalUrgency && (
+            {!wiped && renewalUrgency === "ending-soon" && (
               <RenewMembershipButton
                 memberId={member.id}
                 memberName={member.fullName}
@@ -490,7 +499,13 @@ export default async function MemberDetailPage({
         <div>
           <div className="flex justify-between items-center mb-3">
             <h3 className="text-lg font-semibold">Payments</h3>
-            {!wiped && (
+            {/* When the member has an active plan, the natural action here
+                is "Record payment" (dues / admission). When they have NO
+                plan, recording a membership payment is meaningless — the
+                right action is "Renew" first, then payments become
+                possible. Swap the button in-place so the admin's eye lands
+                on the correct action wherever they look for it. */}
+            {!wiped && current && (
               <RecordPaymentButton
                 memberId={member.id}
                 memberName={member.fullName}
@@ -499,6 +514,19 @@ export default async function MemberDetailPage({
                 memberPlanName={current?.planName ?? null}
                 currentMembershipId={current?.id ?? null}
                 currentEndDate={current?.endDate ?? null}
+              />
+            )}
+            {!wiped && !current && renewalUrgency && (
+              <RenewMembershipButton
+                memberId={member.id}
+                memberName={member.fullName}
+                memberPhotoUrl={avatarUrl}
+                memberGymId={member.gymId}
+                currentPlanName={latestHistoryEntry?.planName ?? null}
+                currentEndDate={latestHistoryEntry?.endDate ?? null}
+                latestStatus={latestHistoryEntry?.status ?? null}
+                urgency={renewalUrgency}
+                plans={renewPlans}
               />
             )}
           </div>

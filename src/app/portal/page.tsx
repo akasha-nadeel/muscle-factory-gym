@@ -301,7 +301,17 @@ export default async function PortalHome() {
           {me.email}
         </p>
         <div className="flex flex-wrap items-center justify-center gap-2 mt-3">
-          <StatusPill variant="active">Active member</StatusPill>
+          {/* Drive the pill from real membership state. `current` is null
+              when the member has no active plan (cancelled / expired /
+              never approved with one), so the badge correctly switches
+              from green "Active member" to amber "No active plan" the
+              moment the admin cancels — instead of staying green forever
+              like the old hardcoded pill. */}
+          {current ? (
+            <StatusPill variant="active">Active member</StatusPill>
+          ) : (
+            <StatusPill variant="inactive">No active plan</StatusPill>
+          )}
           <span className="text-xs text-muted-foreground">
             Since {format(me.createdAt, "MMM yyyy")}
           </span>
