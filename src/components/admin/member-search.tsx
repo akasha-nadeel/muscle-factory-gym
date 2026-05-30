@@ -94,13 +94,15 @@ export function MemberSearch() {
           onFocus={() => setOpen(true)}
           placeholder="Find members…"
           className={cn(
-            "h-9 w-48 md:w-64 rounded-md border bg-background pl-8 pr-3 text-sm",
+            // Full-width on mobile (it lives in its own top-bar row);
+            // fixed width on desktop where it sits inline.
+            "h-9 w-full sm:w-48 md:w-64 rounded-md border bg-background pl-8 pr-3 text-sm",
             "focus:outline-none focus:ring-2 focus:ring-ring",
           )}
         />
       </div>
       {showDropdown && (
-        <div className="absolute right-0 top-full mt-1 w-64 md:w-72 rounded-md border bg-popover text-popover-foreground shadow-lg z-30 max-h-80 overflow-auto">
+        <div className="absolute left-0 right-0 sm:left-auto sm:right-0 top-full mt-1 sm:w-64 md:w-72 rounded-md border bg-popover text-popover-foreground shadow-lg z-30 max-h-80 overflow-auto">
           {loading && (
             <div className="px-3 py-2 text-sm text-muted-foreground">
               Searching…
