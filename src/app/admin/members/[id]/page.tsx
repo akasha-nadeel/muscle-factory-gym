@@ -342,6 +342,9 @@ export default async function MemberDetailPage({
                     latestHistoryEntry?.endDate ??
                     null
                   }
+                  latestStatus={
+                    current ? "active" : latestHistoryEntry?.status ?? null
+                  }
                   urgency={renewalUrgency}
                   plans={renewPlans}
                 />
@@ -418,6 +421,9 @@ export default async function MemberDetailPage({
                 }
                 currentEndDate={
                   current?.endDate ?? latestHistoryEntry?.endDate ?? null
+                }
+                latestStatus={
+                  current ? "active" : latestHistoryEntry?.status ?? null
                 }
                 urgency={renewalUrgency}
                 plans={renewPlans}

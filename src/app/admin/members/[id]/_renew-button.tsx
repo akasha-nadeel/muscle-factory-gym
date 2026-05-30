@@ -38,6 +38,11 @@ export function RenewMembershipButton({
   memberGymId,
   currentPlanName,
   currentEndDate,
+  /** Status of the latest history row used for the identity-strip label.
+   * When the latest row was cancelled, its end_date is stale (the cancel
+   * action doesn't move it), so we hide that date and show "cancelled"
+   * instead of "expired {future-date}" which reads as nonsense. */
+  latestStatus,
   urgency,
   plans,
 }: {
@@ -47,6 +52,7 @@ export function RenewMembershipButton({
   memberGymId?: number | null;
   currentPlanName: string | null;
   currentEndDate: string | null;
+  latestStatus?: "active" | "expired" | "cancelled" | null;
   urgency: Urgency;
   plans: PlanOption[];
 }) {
@@ -144,15 +150,27 @@ export function RenewMembershipButton({
                 {memberGymId !== null && memberGymId !== undefined && (
                   <span className="font-mono">#{memberGymId}</span>
                 )}
-                {currentPlanName && currentEndDate ? (
+                {currentPlanName ? (
                   urgency === "expired" ? (
-                    <span className="text-amber-600 dark:text-amber-400">
-                      {currentPlanName} expired {currentEndDate}
-                    </span>
-                  ) : (
+                    latestStatus === "cancelled" ? (
+                      <span className="text-amber-600 dark:text-amber-400">
+                        {currentPlanName} cancelled
+                      </span>
+                    ) : currentEndDate ? (
+                      <span className="text-amber-600 dark:text-amber-400">
+                        {currentPlanName} expired {currentEndDate}
+                      </span>
+                    ) : (
+                      <span className="text-amber-600 dark:text-amber-400">
+                        {currentPlanName} expired
+                      </span>
+                    )
+                  ) : currentEndDate ? (
                     <span>
                       {currentPlanName} ends {currentEndDate}
                     </span>
+                  ) : (
+                    <span>{currentPlanName}</span>
                   )
                 ) : (
                   <span className="text-amber-600 dark:text-amber-400">
