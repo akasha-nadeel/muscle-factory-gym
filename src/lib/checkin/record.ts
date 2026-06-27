@@ -118,6 +118,31 @@ export async function _recordAttendanceByGymIdUnsafe(input: {
   return evalResult;
 }
 
+/**
+ * Read-only counterpart to `_recordAttendanceByGymIdUnsafe`: resolves a Gym ID
+ * to a member and evaluates eligibility WITHOUT writing an attendance row.
+ *
+ * This is the first half of the kiosk's confirm-before-commit flow — the
+ * member sees their own photo/name and confirms before anything is recorded,
+ * so a mistyped Gym ID (e.g. 1002 instead of 1001) can never mark the wrong
+ * person present. The commit half reuses `_recordAttendanceByMemberIdUnsafe`,
+ * keyed by the resolved memberId rather than the re-typed number.
+ */
+export async function _evaluateByGymIdUnsafe(input: {
+  gymId: number;
+  todaySL: string;
+}): Promise<CheckinResult> {
+  const [memberRow] = await db
+    .select()
+    .from(profiles)
+    .where(eq(profiles.gymId, input.gymId))
+    .limit(1);
+  return loadAndEvaluate({
+    memberRow: memberRow ?? null,
+    todaySL: input.todaySL,
+  });
+}
+
 export async function _recordAttendanceByMemberIdUnsafe(input: {
   memberId: string;
   todaySL: string;

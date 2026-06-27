@@ -6,8 +6,10 @@ import { db } from "@/db";
 import { memberships, payments, plans } from "@/db/schema";
 import { todayInSL } from "@/lib/tz";
 import {
-  _recordAttendanceByGymIdUnsafe,
+  _evaluateByGymIdUnsafe,
+  _recordAttendanceByMemberIdUnsafe,
 } from "@/lib/checkin/record";
+import type { CheckinResult } from "@/lib/checkin/evaluate";
 import { signKioskToken } from "@/lib/qr/token";
 import { computeOutstanding } from "@/lib/payments/outstanding";
 import {
@@ -16,24 +18,23 @@ import {
   computeLastMissedDueDate,
 } from "@/lib/payments/next-due";
 
+export type CheckinMember = {
+  memberId: string;
+  fullName: string;
+  photoUrl: string | null;
+  gymId: number | null;
+  planName: string;
+  expiresOn: string;
+  daysRemaining: number;
+  outstandingLkr: string;
+  /** Calendar-aware next payment due (e.g. Oct 5 + 1 month = Nov 5). */
+  nextPaymentDue: string | null;
+  /** Most recently missed due date (null if not yet past any). */
+  lastMissedDue: string | null;
+};
+
 export type SubmitGymIdResult =
-  | {
-      ok: true;
-      member: {
-        memberId: string;
-        fullName: string;
-        photoUrl: string | null;
-        gymId: number | null;
-        planName: string;
-        expiresOn: string;
-        daysRemaining: number;
-        outstandingLkr: string;
-        /** Calendar-aware next payment due (e.g. Oct 5 + 1 month = Nov 5). */
-        nextPaymentDue: string | null;
-        /** Most recently missed due date (null if not yet past any). */
-        lastMissedDue: string | null;
-      };
-    }
+  | { ok: true; member: CheckinMember }
   | {
       ok: false;
       reason:
@@ -46,109 +47,152 @@ export type SubmitGymIdResult =
         | "db_error";
     };
 
-/** Test-only entry point. No revalidatePath. */
-export async function _submitGymIdUnsafe(input: {
-  gymIdRaw: string;
-  todaySL: string;
-}): Promise<SubmitGymIdResult> {
-  const trimmed = input.gymIdRaw.trim();
-  if (!/^\d+$/.test(trimmed)) {
-    return { ok: false, reason: "invalid_format" };
-  }
-  const n = Number(trimmed);
-  if (n < 1000 || n > 9999) {
-    return { ok: false, reason: "invalid_format" };
-  }
-  try {
-    const r = await _recordAttendanceByGymIdUnsafe({
-      gymId: n,
-      todaySL: input.todaySL,
-      source: "kiosk_id",
-    });
-    if (!r.ok) return { ok: false, reason: r.reason };
+/**
+ * Enrich a successful eval result with cycle-aware financials (outstanding +
+ * due dates) so the kiosk can warn an overdue member. Shared by the preview
+ * and confirm steps so both render identical member detail.
+ */
+async function withFinancials(
+  m: Extract<CheckinResult, { ok: true }>["member"],
+  todaySL: string,
+): Promise<CheckinMember> {
+  const [mem] = await db
+    .select({
+      id: memberships.id,
+      startDate: memberships.startDate,
+      planPriceLkr: plans.priceLkr,
+      planName: plans.name,
+    })
+    .from(memberships)
+    .innerJoin(plans, eq(memberships.planId, plans.id))
+    .where(eq(memberships.id, m.membershipId))
+    .limit(1);
+  const payRows = await db
+    .select()
+    .from(payments)
+    .where(eq(payments.memberId, m.memberId));
 
-    // Compute outstanding for the current membership so the kiosk can
-    // warn the member at check-in time. One extra round-trip — cheap.
-    const [mem] = await db
-      .select({
-        id: memberships.id,
-        startDate: memberships.startDate,
-        planPriceLkr: plans.priceLkr,
-        planName: plans.name,
+  // Cycle-aware outstanding: 0 for a member paid up for the current cycle,
+  // rising by one cycle's price on each due day they haven't paid.
+  const outstandingLkr = mem
+    ? computeOutstanding({
+        planPriceLkr: mem.planPriceLkr,
+        payments: payRows.map((p) => ({
+          id: p.id,
+          amountLkr: p.amountLkr,
+          kind: p.kind,
+          status: p.status,
+          membershipId: p.membershipId,
+        })),
+        membershipId: mem.id,
+        cycleContext: {
+          startDate: mem.startDate,
+          today: todaySL,
+          cyclePeriod: inferCyclePeriod(mem.planName),
+        },
       })
-      .from(memberships)
-      .innerJoin(plans, eq(memberships.planId, plans.id))
-      .where(eq(memberships.id, r.member.membershipId))
-      .limit(1);
-    const payRows = await db
-      .select()
-      .from(payments)
-      .where(eq(payments.memberId, r.member.memberId));
-    const outstandingLkr = mem
-      ? computeOutstanding({
-          planPriceLkr: mem.planPriceLkr,
-          payments: payRows.map((p) => ({
-            id: p.id,
-            amountLkr: p.amountLkr,
-            kind: p.kind,
-            status: p.status,
-            membershipId: p.membershipId,
-          })),
-          membershipId: mem.id,
-          cycleContext: {
-            startDate: mem.startDate,
-            today: input.todaySL,
-            cyclePeriod: inferCyclePeriod(mem.planName),
-          },
-        })
-      : "0";
-    const cyclePeriod = mem ? inferCyclePeriod(mem.planName) : null;
-    const nextPaymentDue = mem && cyclePeriod
+    : "0";
+  const cyclePeriod = mem ? inferCyclePeriod(mem.planName) : null;
+  const nextPaymentDue =
+    mem && cyclePeriod
       ? computeNextPaymentDue({
           membershipStart: mem.startDate,
           cyclePeriod,
-          today: input.todaySL,
+          today: todaySL,
         })
       : null;
-    const lastMissedDue = mem && cyclePeriod
+  const lastMissedDue =
+    mem && cyclePeriod
       ? computeLastMissedDueDate({
           membershipStart: mem.startDate,
           cyclePeriod,
-          today: input.todaySL,
+          today: todaySL,
         })
       : null;
 
-    return {
-      ok: true,
-      member: {
-        memberId: r.member.memberId,
-        fullName: r.member.fullName,
-        photoUrl: r.member.photoUrl,
-        gymId: r.member.gymId,
-        planName: r.member.planName,
-        expiresOn: r.member.expiresOn,
-        daysRemaining: r.member.daysRemaining,
-        outstandingLkr,
-        nextPaymentDue,
-        lastMissedDue,
-      },
-    };
+  return {
+    memberId: m.memberId,
+    fullName: m.fullName,
+    photoUrl: m.photoUrl,
+    gymId: m.gymId,
+    planName: m.planName,
+    expiresOn: m.expiresOn,
+    daysRemaining: m.daysRemaining,
+    outstandingLkr,
+    nextPaymentDue,
+    lastMissedDue,
+  };
+}
+
+function parseGymId(raw: string): number | null {
+  const trimmed = raw.trim();
+  if (!/^\d+$/.test(trimmed)) return null;
+  const n = Number(trimmed);
+  if (n < 1000 || n > 9999) return null;
+  return n;
+}
+
+/**
+ * STEP 1 (read-only). Resolve a typed Gym ID to a member and evaluate
+ * eligibility WITHOUT recording attendance. The kiosk shows the returned
+ * photo + name so the member can confirm it's really them before committing.
+ * Test-only entry point (explicit todaySL, no revalidate).
+ */
+export async function _previewGymIdUnsafe(input: {
+  gymIdRaw: string;
+  todaySL: string;
+}): Promise<SubmitGymIdResult> {
+  const n = parseGymId(input.gymIdRaw);
+  if (n === null) return { ok: false, reason: "invalid_format" };
+  try {
+    const r = await _evaluateByGymIdUnsafe({
+      gymId: n,
+      todaySL: input.todaySL,
+    });
+    if (!r.ok) return { ok: false, reason: r.reason };
+    return { ok: true, member: await withFinancials(r.member, input.todaySL) };
   } catch (e) {
-    console.error("submitGymId db error", e);
+    console.error("previewGymId db error", e);
     return { ok: false, reason: "db_error" };
   }
 }
 
-/** Form-action wrapper called from the kiosk client component. */
-export async function submitGymId(
-  _prev: SubmitGymIdResult | undefined,
-  formData: FormData,
+/**
+ * STEP 2 (write). Commit the check-in for the member the user confirmed in
+ * step 1, keyed by the resolved memberId (never the re-typed number). Re-runs
+ * the full eligibility evaluation so the once-per-day guard stays honest even
+ * if state changed between preview and confirm. Test-only entry point.
+ */
+export async function _confirmCheckinUnsafe(input: {
+  memberId: string;
+  todaySL: string;
+}): Promise<SubmitGymIdResult> {
+  try {
+    const r = await _recordAttendanceByMemberIdUnsafe({
+      memberId: input.memberId,
+      todaySL: input.todaySL,
+      source: "kiosk_id",
+    });
+    if (!r.ok) return { ok: false, reason: r.reason };
+    return { ok: true, member: await withFinancials(r.member, input.todaySL) };
+  } catch (e) {
+    console.error("confirmCheckin db error", e);
+    return { ok: false, reason: "db_error" };
+  }
+}
+
+/** Step 1 form entry — called from the kiosk client component. No write. */
+export async function previewGymId(
+  gymIdRaw: string,
 ): Promise<SubmitGymIdResult> {
-  const gymIdRaw = String(formData.get("gymId") ?? "");
-  const result = await _submitGymIdUnsafe({
-    gymIdRaw,
-    todaySL: todayInSL(),
-  });
+  return _previewGymIdUnsafe({ gymIdRaw, todaySL: todayInSL() });
+}
+
+/** Step 2 form entry — records attendance after the member confirms. */
+export async function confirmCheckin(
+  memberId: string,
+): Promise<SubmitGymIdResult> {
+  const result = await _confirmCheckinUnsafe({ memberId, todaySL: todayInSL() });
   if (result.ok) {
     revalidatePath(`/admin/members/${result.member.memberId}`);
     revalidatePath("/portal");

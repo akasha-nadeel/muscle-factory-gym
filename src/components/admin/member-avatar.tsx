@@ -19,11 +19,15 @@ export function MemberAvatar({
   photoUrl,
   size = "md",
   className,
+  fallbackClassName,
 }: {
   fullName: string;
   photoUrl: string | null;
   size?: "sm" | "md" | "lg";
   className?: string;
+  /** Override the initials styling (e.g. a larger text size on big avatars).
+   * Merged last so it wins over the size preset's default text size. */
+  fallbackClassName?: string;
 }) {
   const sizeClasses = {
     sm: "size-7 text-[10px]",
@@ -42,6 +46,7 @@ export function MemberAvatar({
           // ui/avatar.tsx so initials are always legible.
           avatarColorClass(fullName),
           "text-white font-medium",
+          fallbackClassName,
         )}
       >
         {initialsOf(fullName)}
