@@ -76,6 +76,14 @@ React Email templates rendered to HTML, sent via Resend (`RESEND_API_KEY`, `EMAI
 ### Storage
 Member photos and workout-plan PDFs in Supabase Storage via the service-role key (`src/lib/storage/supabase-storage.ts`, `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY`).
 
+### Testing (`vitest.config.ts`, `tests/setup.ts`)
+`tests/lib/**` are mostly pure-function unit tests, but a large share of the suite (`tests/db/**`, `tests/app/admin/**`, `tests/app/api/**`, `tests/api/**`, and the cron tests) **hits a live remote Postgres and writes to it**. Consequences to know before running or adding tests:
+- **⚠️ `DATABASE_URL` in `.env.local` MUST be a dedicated dev/test database — NEVER production.** Cleanup for most tests is fixture-scoped, but the cron tests are not: `tests/lib/cron-wipe.test.ts` runs `_wipeStaleMembersUnsafe` (a table-wide PII wipe that also deletes Supabase Storage files) and `tests/lib/cron-expire.test.ts` / `inactivate` run table-wide `UPDATE`s against whatever DB is connected — not limited to rows the test created. Running the suite against prod can irreversibly destroy real member data, and every wipe-test run burns numbers off the shared `gym_id_seq`. There is no built-in guard yet; a `DATABASE_URL`-check in `tests/setup.ts` is the recommended safety net.
+- **`npm test` needs `.env.local` with a reachable `DATABASE_URL`** — `tests/setup.ts` loads it via dotenv; there is no local/in-memory DB. Tests will fail (not skip) without a working connection.
+- **`fileParallelism: false`** — files run sequentially on purpose because they share one DB (e.g. the `profiles.gym_id` UNIQUE constraint races under parallel writes). Don't re-enable parallelism; write DB tests to clean up after themselves.
+- `hookTimeout`/`testTimeout` are bumped to 30s to absorb Supabase pooler latency from local dev.
+- Environment is **`node`, not jsdom** — even the `.tsx` component/email-template tests. An `oxc.jsx` override compiles JSX to real JS (tsconfig's `jsx: "preserve"` is for Next.js only). The `@` → `src` path alias is mirrored in `resolve.alias`.
+
 ## UI conventions
 shadcn/ui (`components.json`, style `base-nova`, base color neutral) on Tailwind v4 (CSS-first, `@tailwindcss/postcss`; no `tailwind.config`). Primitives from `@base-ui/react`, icons from `lucide-react`, toasts via `sonner`, charts via `recharts`. Admin is dark-forced (`_force-dark.tsx`). PWA icons are generated at request time via `next/og` ImageResponse (`src/app/icons/[size]/route.tsx`) — there are no static PNG icons, and the service worker is intentionally no-cache. Don't break these patterns.
 

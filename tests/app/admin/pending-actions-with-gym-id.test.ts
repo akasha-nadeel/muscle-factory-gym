@@ -31,11 +31,14 @@ async function clean() {
 // Pin it to MAX (or 999 on empty DB) before each test so assertions of
 // the form `baseline + 1` continue to hold.
 async function resetSequence() {
+  // setval rejects a value below MINVALUE (1000): on an empty table set 1000
+  // with is_called=false (next value = 1000), otherwise MAX with is_called=true
+  // (next = MAX+1). The old `GREATEST(999, …), true` form errored on a fresh DB.
   await db.execute(sql`
     SELECT setval(
       'gym_id_seq',
-      GREATEST(999, COALESCE((SELECT MAX(gym_id) FROM profiles), 999)),
-      true
+      GREATEST(1000, COALESCE((SELECT MAX(gym_id) FROM profiles), 1000)),
+      (SELECT EXISTS (SELECT 1 FROM profiles WHERE gym_id IS NOT NULL))
     )
   `);
 }

@@ -10,17 +10,18 @@ async function clean() {
   await db.delete(profiles).where(like(profiles.clerkUserId, `${CLERK_PREFIX}%`));
 }
 
-// Reset `gym_id_seq` to a known baseline so each test starts deterministically.
-// We pin to GREATEST(999, MAX(gym_id)) so the next nextval() call returns
-// MAX+1 (or 1000 when the table is empty) — matching the "fresh DB" intuition
-// the old MAX(gym_id)+1 tests relied on. The third arg `true` means "the next
-// nextval() returns value+1"; passing 999 makes the first call return 1000.
+// Reset `gym_id_seq` to a known baseline so each test starts deterministically:
+// the next nextval() call returns MAX(gym_id)+1, or 1000 when no gym_id exists.
+// NOTE: setval rejects a value below MINVALUE (1000), so on an empty table we
+// set 1000 with is_called=false (next value = 1000 itself) rather than 999 with
+// is_called=true. When gym_ids exist we set MAX with is_called=true (next =
+// MAX+1). The old `GREATEST(999, …), true` form errored on a truly empty DB.
 async function resetSequence() {
   await db.execute(sql`
     SELECT setval(
       'gym_id_seq',
-      GREATEST(999, COALESCE((SELECT MAX(gym_id) FROM profiles), 999)),
-      true
+      GREATEST(1000, COALESCE((SELECT MAX(gym_id) FROM profiles), 1000)),
+      (SELECT EXISTS (SELECT 1 FROM profiles WHERE gym_id IS NOT NULL))
     )
   `);
 }
