@@ -4,16 +4,20 @@ import { ThemeToggle } from "./theme-toggle";
 import { MemberSearch } from "./member-search";
 import { MobileNav } from "./mobile-nav";
 import { getPendingMemberCount } from "@/lib/admin/pending-count";
+import { getDatabaseUsage } from "@/lib/admin/get-db-usage";
 
 export async function TopBar({ breadcrumbs }: { breadcrumbs: BreadcrumbItem[] }) {
-  const pendingCount = await getPendingMemberCount();
+  const [pendingCount, usage] = await Promise.all([
+    getPendingMemberCount(),
+    getDatabaseUsage().catch(() => null),
+  ]);
   return (
     <header className="sticky top-0 z-20 border-b bg-card">
       {/* Row 1 — nav + breadcrumb + icons. On desktop the search lives
           here too; on mobile it drops to its own row below to avoid
           cramming five items into a 360px-wide bar. */}
       <div className="h-14 flex items-center px-3 md:px-6 gap-2 md:gap-4">
-        <MobileNav pendingCount={pendingCount} />
+        <MobileNav pendingCount={pendingCount} usage={usage} />
         <div className="min-w-0 flex-1">
           <Breadcrumbs items={breadcrumbs} />
         </div>

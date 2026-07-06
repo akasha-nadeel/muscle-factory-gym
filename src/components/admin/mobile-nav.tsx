@@ -5,8 +5,16 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
 import { NavItems } from "./nav-items";
+import { StorageMeter } from "./storage-meter";
+import type { DbUsage } from "@/lib/admin/db-usage";
 
-export function MobileNav({ pendingCount }: { pendingCount?: number }) {
+export function MobileNav({
+  pendingCount,
+  usage,
+}: {
+  pendingCount?: number;
+  usage?: DbUsage | null;
+}) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
@@ -84,6 +92,7 @@ export function MobileNav({ pendingCount }: { pendingCount?: number }) {
               </button>
             </div>
             <NavItems pendingCount={pendingCount} />
+            {usage && <StorageMeter {...usage} />}
           </aside>
         </div>
       )}
