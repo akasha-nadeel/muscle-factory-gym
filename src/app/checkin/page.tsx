@@ -39,7 +39,7 @@ export default async function CheckinKioskPage() {
       />
       <ForceDarkOnMount />
       <main className="min-h-screen bg-background text-foreground p-4 flex items-center justify-center">
-        <div className="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 items-center">
+        <div className="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-[1fr_auto_1fr] gap-8 lg:gap-12 items-center">
           {/* Left: logo + Gym ID form */}
           <div className="w-full max-w-md mx-auto space-y-8">
             <div className="flex justify-center">
@@ -55,10 +55,20 @@ export default async function CheckinKioskPage() {
             <CheckinForm />
           </div>
 
+          {/* Middle: subtle divider between the two check-in options.
+              Vertical (full row height) on desktop, horizontal on mobile
+              where the columns stack. */}
+          <div
+            className="flex items-center justify-center self-stretch"
+            aria-hidden="true"
+          >
+            <span className="h-px w-full bg-border lg:h-full lg:w-px" />
+          </div>
+
           {/* Right: rotating QR code for phone-camera scan */}
           <div className="w-full max-w-md mx-auto flex flex-col items-center gap-4">
             <h2 className="text-xl sm:text-2xl font-semibold text-center">
-              Or scan with your phone
+              Scan with your phone
             </h2>
             <KioskQR initialToken={initialToken} scanUrlBase={scanUrlBase} />
 
