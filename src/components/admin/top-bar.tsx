@@ -1,4 +1,7 @@
+import Link from "next/link";
 import { UserButton } from "@clerk/nextjs";
+import { QrCode } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Breadcrumbs, type BreadcrumbItem } from "./breadcrumbs";
 import { ThemeToggle } from "./theme-toggle";
 import { MemberSearch } from "./member-search";
@@ -25,6 +28,29 @@ export async function TopBar({ breadcrumbs }: { breadcrumbs: BreadcrumbItem[] })
           <div className="hidden sm:block">
             <MemberSearch />
           </div>
+          {/* Kiosk launcher. Outlined circle rather than a ghost icon so it
+              reads as an action next to the ambient theme toggle, and sits
+              deliberately before it — actions first, settings last, avatar
+              anchoring the end. prefetch is off because /checkin is
+              force-dynamic and mints a fresh signed QR token per render;
+              prefetching would burn a token nobody scans. */}
+          <Button
+            variant="outline"
+            size="icon"
+            render={
+              <Link
+                href="/checkin"
+                target="_blank"
+                rel="noopener noreferrer"
+                prefetch={false}
+              />
+            }
+            aria-label="Open check-in kiosk in a new tab"
+            title="Open check-in kiosk"
+            className="rounded-full"
+          >
+            <QrCode className="size-4" />
+          </Button>
           <ThemeToggle />
           <UserButton />
         </div>
