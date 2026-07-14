@@ -1,0 +1,82 @@
+name: Nightly DB Backup
+
+# Nightly logical backup of the PRODUCTION Supabase Postgres.
+#
+# Supabase Free has no automated backups and no point-in-time recovery, so this
+# pg_dump is the only recovery path if production is ever corrupted (a bad
+# migration, an app bug, a mass action, or a Supabase incident).
+#
+# Requires the repo secret BACKUP_DATABASE_URL = the SESSION pooler connection
+# string:
+#   postgresql://postgres.<prod-ref>:<prod-password>@aws-1-ap-southeast-1.pooler.supabase.com:5432/postgres?sslmode=require
+# The SESSION pooler (port 5432) is required — the transaction pooler (6543)
+# breaks pg_dump, and the direct host (db.<ref>.supabase.co) is IPv6-only and
+# unreachable from GitHub's IPv4 runners.
+#
+# ⚠️ PII WARNING: these artifacts contain real member data. Storing them as
+# GitHub artifacts is safe ONLY IF this repository is PRIVATE (artifacts are
+# then downloadable by repo collaborators only). If this repo is PUBLIC, do
+# NOT enable this as-is — switch the upload step to a private destination
+# (a separate private backups repo, or Cloudflare R2 / Google Drive) first.
+
+on:
+  schedule:
+    - cron: "0 21 * * *" # 21:00 UTC = 02:30 Asia/Colombo, daily (off-peak)
+  workflow_dispatch: {} # allow manual runs from the Actions tab / `gh workflow run`
+
+concurrency:
+  group: db-backup
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Install postgresql-client 17
+        # Match the Supabase server major version. Ubuntu's default client is
+        # older, so pull 17 from the official PostgreSQL apt repo (PGDG).
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends curl ca-certificates gnupg lsb-release
+          sudo install -d /usr/share/postgresql-common/pgdg
+          curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+            | sudo gpg --dearmor -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.gpg
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.gpg] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" \
+            | sudo tee /etc/apt/sources.list.d/pgdg.list
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends postgresql-client-17
+          pg_dump --version
+
+      - name: Dump production database
+        env:
+          BACKUP_DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+        run: |
+          if [ -z "$BACKUP_DATABASE_URL" ]; then
+            echo "::error::BACKUP_DATABASE_URL secret is not set. Add it in repo Settings -> Secrets and variables -> Actions."
+            exit 1
+          fi
+          STAMP="$(date -u +%Y%m%d-%H%M%SZ)"
+          FILE="muscle-factory-${STAMP}.dump"
+          echo "BACKUP_FILE=${FILE}" >> "$GITHUB_ENV"
+          # public schema holds all business data; --format=custom is compressed
+          # and restorable with pg_restore. Structure is also reproducible from
+          # the committed drizzle/*.sql, so schema-only loss is not fatal.
+          pg_dump "$BACKUP_DATABASE_URL" \
+            --schema=public \
+            --no-owner \
+            --no-privileges \
+            --format=custom \
+            --file="${FILE}"
+          ls -lh "${FILE}"
+
+      - name: Upload backup artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.BACKUP_FILE }}
+          path: ${{ env.BACKUP_FILE }}
+          retention-days: 30 # keep costs ~$0; old dumps auto-expire
+          if-no-files-found: error
