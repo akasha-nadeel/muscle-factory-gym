@@ -76,6 +76,12 @@ React Email templates rendered to HTML, sent via Resend (`RESEND_API_KEY`, `EMAI
 ### Storage
 Member photos and workout-plan PDFs in Supabase Storage via the service-role key (`src/lib/storage/supabase-storage.ts`, `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY`).
 
+### Backups & disaster recovery (`.github/workflows/db-backup.yml`)
+Supabase Free has **no automated backups and no PITR**, so a nightly GitHub Actions `pg_dump` (02:30 SLT / 21:00 UTC) is the only recovery path for a corruption/bad-migration/mass-action event. It uploads a compressed `--format=custom` dump of the `public` schema as a 30-day artifact. Key facts:
+- **Inert until the repo secret `BACKUP_DATABASE_URL` is set** — the job hard-fails with an error message otherwise. This is the **prod** connection string and must use the **SESSION pooler (port 5432)**: the transaction pooler (6543) breaks `pg_dump` and the direct host is IPv6-only (unreachable from GitHub's IPv4 runners). Note this is a *different* pooler port than the runtime `DATABASE_URL` (6543).
+- Dumps contain **real member PII**, so GitHub-artifact storage is only safe while the repo is **private**. If the repo goes public, switch the upload step to a private destination first.
+- Schema is reproducible from the committed `drizzle/*.sql`, so schema-only loss isn't fatal; data loss is what this guards. Restore with `pg_restore`.
+
 ### Testing (`vitest.config.ts`, `tests/setup.ts`)
 `tests/lib/**` are mostly pure-function unit tests, but a large share of the suite (`tests/db/**`, `tests/app/admin/**`, `tests/app/api/**`, `tests/api/**`, and the cron tests) **hits a live remote Postgres and writes to it**. Consequences to know before running or adding tests:
 - **⚠️ `DATABASE_URL` in `.env.local` MUST be a dedicated dev/test database — NEVER production.** Cleanup for most tests is fixture-scoped, but the cron tests are not: `tests/lib/cron-wipe.test.ts` runs `_wipeStaleMembersUnsafe` (a table-wide PII wipe that also deletes Supabase Storage files) and `tests/lib/cron-expire.test.ts` / `inactivate` run table-wide `UPDATE`s against whatever DB is connected — not limited to rows the test created. Running the suite against prod can irreversibly destroy real member data, and every wipe-test run burns numbers off the shared `gym_id_seq`. There is no built-in guard yet; a `DATABASE_URL`-check in `tests/setup.ts` is the recommended safety net.

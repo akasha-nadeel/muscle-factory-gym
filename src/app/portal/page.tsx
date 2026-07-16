@@ -11,16 +11,16 @@ import {
   Wallet, AlertCircle, Activity, Calendar as CalendarIcon,
   Sparkles, AlertTriangle,
 } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { StatCard } from "@/components/admin/stat-card";
 import { StatusPill } from "@/components/admin/status-pill";
 import { GymIdCopy } from "@/components/admin/gym-id-copy";
-import { initialsOf } from "@/lib/initials";
 import { getCurrentMembership } from "@/lib/memberships/current";
 import { daysRemaining } from "@/lib/days-remaining";
 import { todayInSL } from "@/lib/tz";
 import { RecentActivity } from "./_recent-activity";
 import { PaymentList } from "./_payment-list";
+import { EditProfileButton } from "./_edit-profile";
+import { HeroAvatar } from "./_hero-avatar";
 import { computeOutstanding } from "@/lib/payments/outstanding";
 import {
   inferCyclePeriod,
@@ -30,7 +30,6 @@ import { parseISO } from "date-fns";
 import { signedWorkoutPlanUrl } from "@/lib/storage/supabase-storage";
 import { displayName } from "@/lib/profiles/display-name";
 import { normalizeAvatarUrl } from "@/lib/profiles/photo";
-import { avatarColorClass } from "@/lib/profiles/avatar-color";
 
 export default async function PortalHome() {
   const me = await requireMemberProfile();
@@ -263,58 +262,45 @@ export default async function PortalHome() {
 
   return (
     <div className="space-y-5 sm:space-y-6 max-w-3xl mx-auto pb-8">
-      {/* HERO — centered profile card matching the premium dark-app
-          pattern: small greeting label, big circular avatar with a soft
-          ring, bold name, muted email below, status pill + member-since.
-          Sits on the page background (no card wrapper) so the avatar
-          reads as the page focal point. */}
-      <section
-        aria-labelledby="portal-hero-name"
-        className="text-center pt-2"
-      >
-        <p className="text-xs sm:text-sm text-muted-foreground">
+      {/* HERO — horizontal profile card (reference layout): avatar with a
+          camera badge on the left; name, email, membership status, and a
+          green "Edit profile" CTA on the right. The camera badge uploads a
+          photo directly; the button opens the full editor. */}
+      <section aria-labelledby="portal-hero-name" className="pt-2">
+        <p className="text-xs sm:text-sm text-muted-foreground mb-3">
           {greeting},
         </p>
-        <div className="mt-4 flex justify-center">
-          <Avatar className="size-24 sm:size-28 rounded-full ring-4 ring-emerald-500/15 ring-offset-2 ring-offset-background">
-            {avatarUrl ? (
-              <AvatarImage
-                src={avatarUrl}
-                alt={heroName}
-                className="rounded-full object-cover"
-              />
-            ) : null}
-            <AvatarFallback
-              className={`rounded-full text-2xl sm:text-3xl font-semibold text-white ${avatarColorClass(heroName)}`}
+        <div className="flex items-center gap-4 sm:gap-5">
+          {/* Client avatar: camera badge does a direct upload with an
+              on-image spinner + optimistic preview (no initials flash). */}
+          <HeroAvatar name={heroName} imageUrl={avatarUrl} />
+          <div className="min-w-0 flex-1">
+            <h1
+              id="portal-hero-name"
+              className="text-xl sm:text-2xl font-semibold leading-tight truncate"
             >
-              {initialsOf(heroName)}
-            </AvatarFallback>
-          </Avatar>
-        </div>
-        <h1
-          id="portal-hero-name"
-          className="mt-4 text-2xl sm:text-3xl font-semibold leading-tight"
-        >
-          {heroName}
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1.5 max-w-xs mx-auto truncate px-4">
-          {me.email}
-        </p>
-        <div className="flex flex-wrap items-center justify-center gap-2 mt-3">
-          {/* Drive the pill from real membership state. `current` is null
-              when the member has no active plan (cancelled / expired /
-              never approved with one), so the badge correctly switches
-              from green "Active member" to amber "No active plan" the
-              moment the admin cancels — instead of staying green forever
-              like the old hardcoded pill. */}
-          {current ? (
-            <StatusPill variant="active">Active member</StatusPill>
-          ) : (
-            <StatusPill variant="inactive">No active plan</StatusPill>
-          )}
-          <span className="text-xs text-muted-foreground">
-            Since {format(me.createdAt, "MMM yyyy")}
-          </span>
+              {heroName}
+            </h1>
+            <p className="text-sm text-muted-foreground truncate">
+              {me.email}
+            </p>
+            <div className="flex flex-wrap items-center gap-2 mt-1.5">
+              {/* Drive the pill from real membership state. `current` is
+                  null when the member has no active plan, so the badge
+                  switches from green "Active member" to "No active plan"
+                  the moment the admin cancels. */}
+              {current ? (
+                <StatusPill variant="active">Active member</StatusPill>
+              ) : (
+                <StatusPill variant="inactive">No active plan</StatusPill>
+              )}
+              <span className="text-xs text-muted-foreground">
+                Since {format(me.createdAt, "MMM yyyy")}
+              </span>
+            </div>
+            {/* Opens the full editor (photo + name + phone). */}
+            <EditProfileButton initialPhone={me.phone ?? ""} />
+          </div>
         </div>
         {me.gymId !== null && (
           <div className="mt-5 flex justify-center">

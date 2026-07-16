@@ -74,7 +74,15 @@ export default function RootLayout({
             </defs>
           </svg>
           {children}
-          <Toaster richColors position="top-right" />
+          {/* Offset toasts below the sticky 56px (h-14) header so a
+              full-width mobile toast doesn't land on top of the nav and
+              read as part of it. */}
+          <Toaster
+            richColors
+            position="top-right"
+            offset={{ top: 72 }}
+            mobileOffset={{ top: 68 }}
+          />
           <PwaRegister />
         </body>
       </html>

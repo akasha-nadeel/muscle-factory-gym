@@ -1,8 +1,10 @@
 import Image from "next/image";
 import Link from "next/link";
-import { requireMember } from "@/lib/auth";
-import { UserButton } from "@clerk/nextjs";
+import { requireMember, getCurrentProfile } from "@/lib/auth";
 import { currentUser } from "@clerk/nextjs/server";
+import { PortalAccountMenu } from "@/components/portal/account-menu";
+import { displayName } from "@/lib/profiles/display-name";
+import { normalizeAvatarUrl } from "@/lib/profiles/photo";
 
 // The member portal is ALWAYS dark — it has no theme toggle and a single
 // consistent dark look is the intended design. Force the `dark` class
@@ -21,14 +23,29 @@ export default async function PortalLayout({
   children: React.ReactNode;
 }) {
   await requireMember();
-  // Live name from the Clerk session for the header pill. Non-fatal — falls
-  // back to "Member" if Clerk is briefly unreachable.
+  // Resolve the header identity the SAME way the portal hero does, so the
+  // header avatar + name never diverge from the big hero avatar + name:
+  //  - name: live Clerk name → else the email's local-part (via
+  //    displayName) → else "Member". Matches the hero's fallback chain.
+  //  - image: only a REAL photo (uploaded/OAuth) passes normalizeAvatarUrl;
+  //    Clerk's generic placeholder is dropped to null so the menu renders
+  //    our colored-initials fallback instead.
+  // Non-fatal — falls back gracefully if Clerk is briefly unreachable.
   const clerkUser = await currentUser().catch(() => null);
-  const name =
+  const clerkFullName =
     [clerkUser?.firstName, clerkUser?.lastName]
       .filter(Boolean)
       .join(" ")
-      .trim() || "Member";
+      .trim() || null;
+  const email = clerkUser?.primaryEmailAddress?.emailAddress ?? "";
+  const name = displayName(clerkFullName ?? email);
+  const avatarUrl = normalizeAvatarUrl(clerkUser?.imageUrl);
+  // Subtitle under the name in the header pill — the member's Gym ID as a
+  // handle (e.g. "#1000"), falling back to "Member" before one is assigned
+  // (pending accounts). Cheap read, no redirect.
+  const profile = await getCurrentProfile();
+  const handle =
+    profile?.gymId != null ? `#${profile.gymId}` : "Member";
   return (
     <>
       <script
@@ -46,24 +63,23 @@ export default async function PortalLayout({
               width={180}
               height={42}
               priority
-              className="h-7 sm:h-[34px] w-auto"
+              className="h-5 sm:h-[34px] w-auto"
             />
           </Link>
-          {/* Name + avatar in a dark rounded pill. Name truncates so the
-              pill stays compact on mobile next to the logo. Only the avatar
-              (UserButton) is interactive — it opens the account menu. */}
-          <div className="flex items-center gap-2 rounded-full border border-border/60 bg-card py-1 pl-3.5 pr-1 shadow-sm">
-            <span className="text-sm font-medium text-foreground truncate max-w-[100px] sm:max-w-[160px]">
-              {name}
-            </span>
-            <UserButton
-              appearance={{
-                elements: {
-                  userButtonAvatarBox: "!size-9 sm:!size-8",
-                  avatarBox: "!size-9 sm:!size-8",
-                },
-              }}
-            />
+          {/* Identity pill (reference layout): avatar on the left, then the
+              name with a subtitle (Gym ID) stacked to the right. Text
+              truncates so the pill stays compact next to the logo on
+              mobile. Only the avatar is interactive — it opens the menu. */}
+          <div className="flex items-center gap-1.5 sm:gap-2 rounded-full border border-border/60 bg-card py-0.5 pl-2.5 pr-0.5 sm:pl-3 sm:pr-1 shadow-sm">
+            <div className="flex min-w-0 flex-col items-end leading-tight text-right">
+              <span className="truncate text-[0.72rem] sm:text-[0.8rem] font-medium text-foreground max-w-[92px] sm:max-w-[160px]">
+                {name}
+              </span>
+              <span className="truncate text-[0.62rem] sm:text-[0.7rem] text-muted-foreground max-w-[92px] sm:max-w-[160px]">
+                {handle}
+              </span>
+            </div>
+            <PortalAccountMenu name={name} email={email} imageUrl={avatarUrl} />
           </div>
         </header>
         <main className="flex-1 overflow-y-auto">

@@ -40,3 +40,27 @@ export async function updateMyProfile(
   }
   return result;
 }
+
+export type PhoneActionResult = { ok: true } | { ok: false; error: string };
+
+/**
+ * Phone-only update for the quick-edit dialog on the portal home. The name
+ * is edited via Clerk in that dialog (and mirrors to the DB through the
+ * user.updated webhook), so here we touch ONLY the DB `phone` column and
+ * leave `fullName` untouched. Reuses the shared validator by passing a
+ * placeholder name so just the phone rule runs.
+ */
+export async function updateMyPhone(phone: string): Promise<PhoneActionResult> {
+  const me = await requireMemberProfile();
+  const v = validateProfileEdit({ fullName: "placeholder", phone });
+  if (!v.ok) {
+    return { ok: false, error: v.errors.phone ?? "Enter a valid phone number" };
+  }
+  await db
+    .update(profiles)
+    .set({ phone: v.value.phone, updatedAt: sql`now()` })
+    .where(eq(profiles.id, me.id));
+  revalidatePath("/portal/profile");
+  revalidatePath("/portal");
+  return { ok: true };
+}

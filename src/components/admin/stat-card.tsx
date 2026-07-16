@@ -5,32 +5,39 @@ export type StatCardAccent = "red" | "green" | "amber" | "blue" | "default";
 
 /**
  * Length-keyed font sizing that pairs with @container on the card root.
- * Returns the COMPLETE size stack (base + container query upscales) so
- * short values get prominent treatment AND long values cap low enough
- * to fit in narrow grids.
+ * Returns the COMPLETE size stack (base + container query upscales).
  *
- * Examples:
- *  - "3" (1 char) → text-2xl baseline, text-3xl when card has room
- *  - "Monthly" (7 chars) → text-lg baseline, scales up to text-2xl
- *  - "LKR 5,499.99" (12 chars) → text-base baseline, up to text-2xl
- *  - "LKR 9,999,999.99" (16 chars) → text-sm baseline, caps at text-lg
+ * The BASELINE (before any @[…] query) must fit the narrowest card we
+ * ship: a 2-col grid on a ~331px phone yields a ~143px card, of which
+ * only ~78px is left for the value after the icon + gap + padding. So
+ * baselines are sized to fit that width and the @container queries scale
+ * UP as the card gets wider (single-column, tablet, desktop 4-col). This
+ * is what keeps "LKR 5,000" from truncating to "LKR 5,…" on mobile while
+ * still rendering big on a wide admin card.
+ *
+ * Examples (baseline → widest):
+ *  - "42" (2 chars) → text-2xl → text-3xl
+ *  - "Monthly" (7 chars) → text-sm → text-2xl
+ *  - "LKR 25,000" (10 chars) → text-xs → text-2xl
+ *  - "LKR 1,234,567" (13 chars) → text-xs → text-xl
  */
 function valueSizeClass(value: string | number): string {
   const len = String(value).length;
-  // Very short — always large; "3" / "0" should dominate the card.
-  if (len <= 3) return "text-2xl @[14rem]:text-3xl";
-  // Short — "LKR 0", "Done"
+  // Very short — always large; "3" / "0" / "42" should dominate the card.
+  if (len <= 3) return "text-2xl @[9rem]:text-3xl";
+  // Short — "LKR 0", "Done", "LKR 99"
   if (len <= 6) return "text-xl @[10rem]:text-2xl @[16rem]:text-3xl";
-  // Short-medium — "Monthly", "Settled", "LKR 999"
-  if (len <= 9) return "text-lg @[10rem]:text-xl @[14rem]:text-2xl";
-  // Medium — "LKR 1,000.50", "LKR 5,499.99"
+  // Short-medium — "Monthly", "Settled", "LKR 5,000"
+  if (len <= 9)
+    return "text-sm @[10rem]:text-base @[12rem]:text-lg @[14rem]:text-xl @[18rem]:text-2xl";
+  // Medium — "LKR 25,000", "LKR 1,000.50"
   if (len <= 12)
-    return "text-base @[12rem]:text-lg @[16rem]:text-xl @[20rem]:text-2xl";
-  // Long — "LKR 25,332.63", "LKR 99,999.99"
+    return "text-xs @[10rem]:text-sm @[12rem]:text-base @[16rem]:text-lg @[20rem]:text-xl @[24rem]:text-2xl";
+  // Long — "LKR 250,332", "LKR 99,999.99"
   if (len <= 15)
-    return "text-sm @[14rem]:text-base @[18rem]:text-lg @[22rem]:text-xl";
+    return "text-xs @[12rem]:text-sm @[16rem]:text-base @[20rem]:text-lg @[24rem]:text-xl";
   // Very long — "LKR 1,234,567.89"+
-  return "text-sm @[18rem]:text-base @[22rem]:text-lg";
+  return "text-xs @[14rem]:text-sm @[18rem]:text-base @[24rem]:text-lg";
 }
 
 /**
