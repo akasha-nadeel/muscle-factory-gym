@@ -61,12 +61,57 @@ const cardSurface: Record<StatCardAccent, string> = {
   default: "bg-card",
 };
 
+/**
+ * Solid, vivid icon squares for the "stack" variant. In that layout the
+ * card itself is a uniform dark surface and ALL the colour lives in the
+ * icon tile at the top (matching the reference design).
+ */
+const iconBgSolid: Record<StatCardAccent, string> = {
+  red: "bg-rose-500 text-white",
+  green: "bg-emerald-500 text-white",
+  amber: "bg-amber-500 text-white",
+  blue: "bg-sky-500 text-white",
+  default: "bg-muted text-muted-foreground",
+};
+
+/**
+ * Card surface for the "stack" variant: a near-black card with a subtle
+ * accent-coloured gradient bleeding in from the top-left (behind the icon),
+ * fading to the flat card colour. Matches the reference — the tint is felt,
+ * not seen. Same `from-{accent}/10 via-card to-card` recipe the admin
+ * overview hero cards use.
+ */
+const cardSurfaceStack: Record<StatCardAccent, string> = {
+  red: "bg-gradient-to-br from-rose-500/10 via-card to-card border-border/60",
+  green: "bg-gradient-to-br from-emerald-500/10 via-card to-card border-border/60",
+  amber: "bg-gradient-to-br from-amber-500/10 via-card to-card border-border/60",
+  blue: "bg-gradient-to-br from-sky-500/10 via-card to-card border-border/60",
+  default: "bg-card border-border/60",
+};
+
+/**
+ * Value sizing for the "stack" variant. Here the value spans the full card
+ * width (it's below the icon, not beside it), so it can render larger than
+ * the compact row layout allows. Still @container-keyed so it scales with
+ * the card's own width.
+ */
+function stackValueSizeClass(value: string | number): string {
+  const len = String(value).length;
+  if (len <= 3) return "text-3xl @[9rem]:text-4xl";
+  if (len <= 6) return "text-2xl @[10rem]:text-3xl";
+  if (len <= 9) return "text-xl @[10rem]:text-2xl @[16rem]:text-3xl";
+  if (len <= 12) return "text-lg @[10rem]:text-xl @[16rem]:text-2xl";
+  if (len <= 15) return "text-base @[12rem]:text-lg @[18rem]:text-xl";
+  return "text-sm @[14rem]:text-base @[20rem]:text-lg";
+}
+
 export function StatCard({
   icon: Icon,
   label,
   value,
   caption,
   accentColor = "default",
+  variant = "row",
   className,
 }: {
   icon: LucideIcon;
@@ -74,8 +119,49 @@ export function StatCard({
   value: string | number;
   caption?: string;
   accentColor?: StatCardAccent;
+  /** "row": compact icon-left layout (admin). "stack": icon-on-top,
+   *  uniform dark card with a vivid icon tile (portal / reference style). */
+  variant?: "row" | "stack";
   className?: string;
 }) {
+  if (variant === "stack") {
+    return (
+      <div
+        data-slot="stat-card"
+        className={cn(
+          "@container flex flex-col gap-3 rounded-2xl border p-3.5 transition-colors sm:p-4",
+          cardSurfaceStack[accentColor],
+          className,
+        )}
+      >
+        <div
+          className={cn(
+            "flex size-9 items-center justify-center rounded-xl",
+            iconBgSolid[accentColor],
+          )}
+        >
+          <Icon className="size-5" />
+        </div>
+        <div className="min-w-0">
+          <div className="truncate text-xs text-muted-foreground">{label}</div>
+          <div
+            className={cn(
+              "mt-1 truncate font-semibold tabular-nums whitespace-nowrap",
+              stackValueSizeClass(value),
+            )}
+          >
+            {value}
+          </div>
+          {caption && (
+            <div className="mt-1 line-clamp-2 text-[0.7rem] text-muted-foreground">
+              {caption}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       data-slot="stat-card"

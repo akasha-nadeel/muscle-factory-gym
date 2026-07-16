@@ -229,15 +229,6 @@ export default async function PortalHome() {
       })
     : null;
 
-  const activeMembershipCaption = (() => {
-    if (!current) return "None";
-    if (nextPaymentDue) {
-      return `Next due ${format(parseISO(nextPaymentDue), "MMM d, yyyy")}`;
-    }
-    const days = Math.max(0, daysRemaining({ today, endDate: current.endDate }));
-    return `${days} day${days === 1 ? "" : "s"} remaining`;
-  })();
-
   // Greeting based on time of SL day — small personalization touch that
   // makes the portal feel less institutional.
   const hour = new Date(
@@ -454,20 +445,21 @@ export default async function PortalHome() {
       <section aria-label="Membership stats">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <StatCard
+            variant="stack"
             icon={Wallet}
             label="Total paid"
             value={`LKR ${totalPaid.toLocaleString()}`}
-            caption="Lifetime"
             accentColor="green"
           />
           <StatCard
+            variant="stack"
             icon={CalendarIcon}
             label="Plan"
             value={current?.planName ?? "—"}
-            caption={activeMembershipCaption}
             accentColor="blue"
           />
           <StatCard
+            variant="stack"
             icon={AlertCircle}
             label="Outstanding"
             value={
@@ -475,14 +467,13 @@ export default async function PortalHome() {
                 ? `LKR ${Number(outstanding).toLocaleString()}`
                 : "Settled"
             }
-            caption={hasOutstanding ? "Action required" : "All clear"}
             accentColor={hasOutstanding ? "red" : "green"}
           />
           <StatCard
+            variant="stack"
             icon={Activity}
             label="Check-ins"
             value={totalCheckins}
-            caption="Lifetime"
             accentColor="amber"
           />
         </div>
@@ -500,8 +491,7 @@ export default async function PortalHome() {
           right-aligned eye-anchor, kind+method as muted metadata,
           status pill nested below amount. Show-more caps initial render. */}
       <section>
-        <h2 className="text-lg font-semibold mb-3">Payment history</h2>
-        <PaymentList rows={paymentRows} />
+        <PaymentList rows={paymentRows} title="Payment history" />
       </section>
     </div>
   );
