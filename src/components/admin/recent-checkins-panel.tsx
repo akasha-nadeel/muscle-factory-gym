@@ -1,8 +1,12 @@
+"use client";
+
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MemberAvatar } from "./member-avatar";
 import { EmptyState } from "./empty-state";
+import { RangeToggle, type RangeKey, type RangeStarts } from "./range-toggle";
 import { Activity } from "lucide-react";
 import { displayName } from "@/lib/profiles/display-name";
 
@@ -22,27 +26,38 @@ const sourceLabel: Record<RecentCheckin["source"], string> = {
   kiosk_id: "Kiosk",
 };
 
+const MAX_VISIBLE = 10;
+
 export function RecentCheckinsPanel({
   rows,
-  headerSlot,
+  rangeStarts,
 }: {
+  /** Rows for the WIDEST range, most-recent first. Filtered client-side. */
   rows: RecentCheckin[];
-  headerSlot?: React.ReactNode;
+  rangeStarts: RangeStarts;
 }) {
+  const [range, setRange] = useState<RangeKey>("today");
+  const visible = useMemo(() => {
+    const start = rangeStarts[range];
+    return rows
+      .filter((c) => new Date(c.checkedInAt).getTime() >= start)
+      .slice(0, MAX_VISIBLE);
+  }, [rows, rangeStarts, range]);
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3 gap-2">
         <CardTitle className="text-base shrink-0">Recent check-ins</CardTitle>
-        {headerSlot && (
-          <div className="flex items-center gap-2 ml-auto">{headerSlot}</div>
-        )}
+        <div className="flex items-center gap-2 ml-auto">
+          <RangeToggle value={range} onChange={setRange} />
+        </div>
       </CardHeader>
       <CardContent className="p-0">
-        {rows.length === 0 ? (
+        {visible.length === 0 ? (
           <EmptyState icon={Activity} title="No check-ins yet" />
         ) : (
           <ul className="divide-y">
-            {rows.map((c) => (
+            {visible.map((c) => (
               <li key={c.id} className="px-4 py-3 flex items-center gap-3">
                 <MemberAvatar
                   size="sm"

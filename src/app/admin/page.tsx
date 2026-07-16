@@ -27,7 +27,7 @@ import {
   type RecentCheckin,
 } from "@/components/admin/recent-checkins-panel";
 import { todayInSL } from "@/lib/tz";
-import { RangeTabs, type RangeKey } from "@/components/admin/range-tabs";
+import type { RangeKey, RangeStarts } from "@/components/admin/range-toggle";
 import { getOutstandingBreakdown } from "@/lib/payments/outstanding-breakdown";
 
 function startOfMonthSL(todaySL: string): string {
@@ -65,10 +65,6 @@ function rangeStartSL(todaySL: string, range: RangeKey): Date {
   return d;
 }
 
-function parseRange(raw: string | undefined): RangeKey {
-  return raw === "week" || raw === "month" ? raw : "today";
-}
-
 /**
  * Full-precision LKR with thousand-separators. Used on the dashboard
  * KPI cards — StatCard auto-shrinks the font when the string is long
@@ -78,14 +74,8 @@ function formatLkrFull(n: number): string {
   return `LKR ${n.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
 }
 
-export default async function AdminHome({
-  searchParams,
-}: {
-  searchParams: Promise<{ range?: string }>;
-}) {
+export default async function AdminHome() {
   const admin = await requireAdminProfile();
-  const sp = await searchParams;
-  const range = parseRange(sp.range);
   const today = todayInSL();
 
   // Greeting name comes from Clerk (always live) rather than profiles.full_name
@@ -104,7 +94,20 @@ export default async function AdminHome({
   // Previous month's window — used for the revenue-trend comparison on
   // the hero panel ("LKR X this month  ↑ N% vs last month").
   const prevMonthStart = prevMonthOf(monthStart);
-  const recentRangeStart = rangeStartSL(today, range);
+
+  // Range thresholds (epoch ms, SL-correct) handed to the client panels so
+  // the Today/Week/Month toggle filters already-loaded rows instantly —
+  // no navigation, no re-query. We fetch ONCE from the widest window (the
+  // earliest of the three starts — near month-start "week" can be wider
+  // than "month") and let the client filter/slice per range.
+  const rangeStarts: RangeStarts = {
+    today: rangeStartSL(today, "today").getTime(),
+    week: rangeStartSL(today, "week").getTime(),
+    month: rangeStartSL(today, "month").getTime(),
+  };
+  const widestStart = new Date(
+    Math.min(rangeStarts.today, rangeStarts.week, rangeStarts.month),
+  );
 
   // Cycle-aware outstanding total — uses the same helper as /admin/outstanding
   // so dashboard + breakdown + member-detail all agree on the number.
@@ -164,11 +167,11 @@ export default async function AdminHome({
       .where(
         and(
           eq(payments.status, "succeeded"),
-          gte(payments.paidAt, recentRangeStart),
+          gte(payments.paidAt, widestStart),
         ),
       )
       .orderBy(desc(payments.paidAt))
-      .limit(10),
+      .limit(50),
     db
       .select({
         id: attendance.id,
@@ -181,9 +184,9 @@ export default async function AdminHome({
       })
       .from(attendance)
       .innerJoin(profiles, eq(profiles.id, attendance.memberId))
-      .where(gte(attendance.checkedInAt, recentRangeStart))
+      .where(gte(attendance.checkedInAt, widestStart))
       .orderBy(desc(attendance.checkedInAt))
-      .limit(10),
+      .limit(50),
   ]);
 
   const revenue = Number(revenueRow[0]?.total ?? 0);
@@ -340,11 +343,11 @@ export default async function AdminHome({
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <RecentPaymentsPanel
             rows={paymentsRaw as RecentPayment[]}
-            headerSlot={<RangeTabs current={range} />}
+            rangeStarts={rangeStarts}
           />
           <RecentCheckinsPanel
             rows={checkinsRaw as RecentCheckin[]}
-            headerSlot={<RangeTabs current={range} />}
+            rangeStarts={rangeStarts}
           />
         </div>
       </div>
