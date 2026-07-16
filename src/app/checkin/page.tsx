@@ -2,13 +2,9 @@ import Image from "next/image";
 import { headers } from "next/headers";
 import { CheckinForm } from "./_form";
 import { KioskQR } from "./_kiosk-qr";
-import { ForceDarkOnMount } from "../_force-dark";
 import { getFreshKioskToken } from "./actions";
 
 export const dynamic = "force-dynamic";
-
-// Kiosk page is locked to dark theme — same pattern as the landing page.
-const themeInitScript = `document.documentElement.classList.add('dark');`;
 
 /**
  * Derive the public URL where /checkin/scan can be reached. Phone cameras
@@ -32,13 +28,7 @@ export default async function CheckinKioskPage() {
   ]);
 
   return (
-    <>
-      <script
-        dangerouslySetInnerHTML={{ __html: themeInitScript }}
-        suppressHydrationWarning
-      />
-      <ForceDarkOnMount />
-      <main className="min-h-screen bg-background text-foreground p-4 flex items-center justify-center">
+    <main className="min-h-screen bg-background text-foreground p-4 flex items-center justify-center">
         <div className="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-[1fr_auto_1fr] gap-8 lg:gap-12 items-center">
           {/* Left: logo + Gym ID form */}
           <div className="w-full max-w-md mx-auto space-y-8">
@@ -112,7 +102,6 @@ export default async function CheckinKioskPage() {
             </div>
           </div>
         </div>
-      </main>
-    </>
+    </main>
   );
 }

@@ -6,17 +6,6 @@ import { PortalAccountMenu } from "@/components/portal/account-menu";
 import { displayName } from "@/lib/profiles/display-name";
 import { normalizeAvatarUrl } from "@/lib/profiles/photo";
 
-// The member portal is ALWAYS dark — it has no theme toggle and a single
-// consistent dark look is the intended design. Force the `dark` class
-// regardless of any localStorage `theme` value (which can be left as
-// 'light' from the admin UI's toggle in a shared browser, which was
-// flipping the portal to light). Runs before hydration → no flash.
-const themeInitScript = `
-(function() {
-  document.documentElement.classList.add('dark');
-})();
-`;
-
 export default async function PortalLayout({
   children,
 }: {
@@ -47,12 +36,7 @@ export default async function PortalLayout({
   const handle =
     profile?.gymId != null ? `#${profile.gymId}` : "Member";
   return (
-    <>
-      <script
-        dangerouslySetInnerHTML={{ __html: themeInitScript }}
-        suppressHydrationWarning
-      />
-      <div className="min-h-screen flex flex-col bg-background text-foreground">
+    <div className="min-h-screen flex flex-col bg-background text-foreground">
         <header className="h-14 flex items-center justify-between px-5 sm:px-6 md:px-8">
           {/* Brand logo, top-left. Portal is always dark, so the logo's
               white+red rendering is correct with no light-mode filter. */}
@@ -85,7 +69,6 @@ export default async function PortalLayout({
         <main className="flex-1 overflow-y-auto">
           <div className="max-w-5xl mx-auto w-full p-4 md:p-6">{children}</div>
         </main>
-      </div>
-    </>
+    </div>
   );
 }

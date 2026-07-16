@@ -3,7 +3,6 @@ import { UserButton } from "@clerk/nextjs";
 import { QrCode } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Breadcrumbs, type BreadcrumbItem } from "./breadcrumbs";
-import { ThemeToggle } from "./theme-toggle";
 import { MemberSearch } from "./member-search";
 import { MobileNav } from "./mobile-nav";
 import { getPendingMemberCount } from "@/lib/admin/pending-count";
@@ -29,11 +28,10 @@ export async function TopBar({ breadcrumbs }: { breadcrumbs: BreadcrumbItem[] })
             <MemberSearch />
           </div>
           {/* Kiosk launcher. Outlined circle rather than a ghost icon so it
-              reads as an action next to the ambient theme toggle, and sits
-              deliberately before it — actions first, settings last, avatar
-              anchoring the end. prefetch is off because /checkin is
-              force-dynamic and mints a fresh signed QR token per render;
-              prefetching would burn a token nobody scans. */}
+              reads as an action, with the avatar anchoring the end. prefetch
+              is off because /checkin is force-dynamic and mints a fresh
+              signed QR token per render; prefetching would burn a token
+              nobody scans. */}
           <Button
             variant="outline"
             size="icon"
@@ -51,7 +49,6 @@ export async function TopBar({ breadcrumbs }: { breadcrumbs: BreadcrumbItem[] })
           >
             <QrCode className="size-4" />
           </Button>
-          <ThemeToggle />
           <UserButton />
         </div>
       </div>
