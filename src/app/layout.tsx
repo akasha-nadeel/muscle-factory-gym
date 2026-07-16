@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
+import { dark } from "@clerk/themes";
 import { Toaster } from "@/components/ui/sonner";
 import { PwaRegister } from "@/components/pwa-register";
 import "./globals.css";
@@ -39,7 +40,21 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <ClerkProvider>
+    <ClerkProvider
+      appearance={{
+        // The app is dark-only, so Clerk's own widgets (sign-in, sign-up,
+        // <UserButton>, and the account/profile modals) use Clerk's `dark`
+        // base theme instead of their default light styling. `--primary`
+        // is the gym's brand red — align Clerk's accent to it so buttons /
+        // links match the rest of the app.
+        baseTheme: dark,
+        variables: {
+          // Brand red (hex so Clerk's colour parser is happy) matching the
+          // app's --primary, so Clerk's buttons/links match the rest of it.
+          colorPrimary: "#dc2626",
+        },
+      }}
+    >
       {/* The app is dark-only. `dark` is applied statically here (server
           rendered) so it's present on first paint with no flash and no
           per-page theme-init script. It stays on <html> because the
