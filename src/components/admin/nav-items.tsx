@@ -31,16 +31,18 @@ function NavLinkContents({
   Icon,
   label,
   badge,
+  large = false,
 }: {
   active: boolean;
   Icon: LucideIcon;
   label: string;
   badge?: number;
+  large?: boolean;
 }) {
   const { pending } = useLinkStatus();
   return (
     <>
-      <Icon className="size-4 shrink-0" />
+      <Icon className={cn("shrink-0", large ? "size-5" : "size-4")} />
       <span className="flex-1">{label}</span>
       {badge !== undefined && badge > 0 && (
         <span className="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full bg-primary text-primary-foreground text-xs font-semibold tabular-nums">
@@ -48,11 +50,14 @@ function NavLinkContents({
         </span>
       )}
       {pending ? (
-        <Loader2 className="size-4 shrink-0 animate-spin" />
+        <Loader2
+          className={cn("shrink-0 animate-spin", large ? "size-5" : "size-4")}
+        />
       ) : (
         <ChevronRight
           className={cn(
-            "size-4 shrink-0",
+            "shrink-0",
+            large ? "size-5" : "size-4",
             active ? "opacity-100" : "opacity-40",
           )}
         />
@@ -64,13 +69,23 @@ function NavLinkContents({
 export function NavItems({
   onNavigate,
   pendingCount,
+  variant = "sidebar",
 }: {
   onNavigate?: () => void;
   pendingCount?: number;
+  /** "sidebar": compact rows (desktop rail). "sheet": large, full-width
+   *  rows with dividers for the mobile bottom-sheet menu. */
+  variant?: "sidebar" | "sheet";
 }) {
   const pathname = usePathname();
+  const sheet = variant === "sheet";
   return (
-    <nav className="flex-1 px-3 py-4 flex flex-col gap-1">
+    <nav
+      className={cn(
+        "flex flex-col",
+        sheet ? "px-1 py-1" : "flex-1 px-3 py-4 gap-1",
+      )}
+    >
       {items.map((item) => {
         const active =
           item.href === "/admin"
@@ -85,10 +100,20 @@ export function NavItems({
             onClick={onNavigate}
             prefetch
             className={cn(
-              "relative flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors",
-              active
-                ? "bg-sidebar-accent text-sidebar-accent-foreground before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-[3px] before:rounded-r-full before:bg-sidebar-primary"
-                : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground",
+              "relative flex items-center transition-colors",
+              sheet
+                ? cn(
+                    "gap-4 px-5 py-4 text-base font-semibold tracking-wide uppercase border-b border-sidebar-border/60 last:border-b-0",
+                    active
+                      ? "text-sidebar-accent-foreground"
+                      : "text-sidebar-foreground hover:text-sidebar-accent-foreground",
+                  )
+                : cn(
+                    "gap-3 rounded-md px-3 py-2.5 text-sm font-medium",
+                    active
+                      ? "bg-sidebar-accent text-sidebar-accent-foreground before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-[3px] before:rounded-r-full before:bg-sidebar-primary"
+                      : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground",
+                  ),
             )}
           >
             <NavLinkContents
@@ -96,6 +121,7 @@ export function NavItems({
               Icon={item.icon}
               label={item.label}
               badge={badge}
+              large={sheet}
             />
           </Link>
         );

@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { Menu, X } from "lucide-react";
+import { Menu } from "lucide-react";
 import { NavItems } from "./nav-items";
 import { StorageMeter } from "./storage-meter";
 import type { DbUsage } from "@/lib/admin/db-usage";
@@ -56,42 +55,31 @@ export function MobileNav({
 
       {open && (
         <div className="fixed inset-0 z-50 md:hidden">
-          {/* Backdrop covers the screen below the panel and dismisses on tap. */}
+          {/* Backdrop dismisses on tap; fades in under the sheet. */}
           <div
-            className="absolute inset-0 bg-black/60"
+            className="absolute inset-0 bg-black/60 animate-in fade-in duration-200"
             onClick={() => setOpen(false)}
             aria-hidden="true"
           />
-          {/* Top-anchored drop-down panel.
-              Senior pattern: nav drops down from the top edge (full-width)
-              instead of sliding in from the side. Keeps the gym brand
-              (logo + dark surface) anchored where the page header already
-              sat, so the menu feels like the header expanding open. The
-              slide-down animation makes the open feel intentional. */}
+          {/* Bottom sheet: slides UP from the bottom edge with a drag handle
+              and rounded top corners — the mobile-app menu pattern (Apple
+              Music / storefront drawers). Tapping the handle or backdrop
+              dismisses it. Storage meter anchors the footer. */}
           <aside
             role="dialog"
             aria-modal="true"
-            className="dark absolute inset-x-0 top-0 bg-sidebar text-sidebar-foreground border-b border-sidebar-border flex flex-col shadow-2xl max-h-[85vh] overflow-y-auto animate-in slide-in-from-top duration-200"
+            className="dark absolute inset-x-0 bottom-0 rounded-t-2xl bg-sidebar text-sidebar-foreground border-t border-sidebar-border flex flex-col shadow-2xl max-h-[85vh] overflow-y-auto animate-in slide-in-from-bottom duration-300"
           >
-            <div className="h-14 px-4 border-b border-sidebar-border flex items-center justify-between gap-2 shrink-0">
-              <Image
-                src="/logo.webp"
-                alt="Muscle Factory Gym"
-                width={180}
-                height={42}
-                priority
-                className="h-[34px] w-auto"
-              />
-              <button
-                type="button"
-                aria-label="Close menu"
-                onClick={() => setOpen(false)}
-                className="inline-flex items-center justify-center size-9 rounded-md hover:bg-sidebar-accent"
-              >
-                <X className="size-5" />
-              </button>
-            </div>
-            <NavItems pendingCount={pendingCount} />
+            {/* Drag handle — also a tap target to close. */}
+            <button
+              type="button"
+              aria-label="Close menu"
+              onClick={() => setOpen(false)}
+              className="mx-auto mt-3 mb-1 flex h-6 w-16 items-center justify-center shrink-0"
+            >
+              <span className="h-1.5 w-10 rounded-full bg-sidebar-foreground/25" />
+            </button>
+            <NavItems variant="sheet" pendingCount={pendingCount} />
             {usage && <StorageMeter {...usage} />}
           </aside>
         </div>
