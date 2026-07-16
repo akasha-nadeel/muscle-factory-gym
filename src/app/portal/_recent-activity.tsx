@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCircle2, ChevronDown, ChevronUp } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { CheckCircle2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { formatSLDate, formatSLTime } from "@/lib/tz";
 
@@ -39,73 +38,78 @@ function friendlyDate(date: Date): string {
   return formatSLDate(date);
 }
 
-export function RecentActivity({ rows }: { rows: AttendanceRow[] }) {
+export function RecentActivity({
+  rows,
+  title,
+}: {
+  rows: AttendanceRow[];
+  title: string;
+}) {
   const [expanded, setExpanded] = useState(false);
-
-  if (rows.length === 0) {
-    return (
-      <div className="rounded-xl border bg-card px-4 py-8 text-center">
-        <div className="size-12 rounded-full bg-muted/50 text-muted-foreground inline-flex items-center justify-center mb-3">
-          <CheckCircle2 className="size-6" />
-        </div>
-        <p className="text-sm font-medium">No check-ins yet</p>
-        <p className="text-xs text-muted-foreground mt-1 max-w-xs mx-auto">
-          Type your Gym ID at the front-desk kiosk to mark your first
-          attendance.
-        </p>
-      </div>
-    );
-  }
-
-  const visible =
-    expanded || rows.length <= INITIAL_VISIBLE
-      ? rows
-      : rows.slice(0, INITIAL_VISIBLE);
   const hasMore = rows.length > INITIAL_VISIBLE;
+  const visible =
+    expanded || !hasMore ? rows : rows.slice(0, INITIAL_VISIBLE);
 
   return (
-    <div className="space-y-2">
-      {visible.map((r) => (
-        <div
-          key={r.id}
-          className="flex items-center gap-3 rounded-xl border bg-card p-3"
-        >
-          <div className="shrink-0 size-9 rounded-full bg-emerald-500/15 text-emerald-500 flex items-center justify-center">
-            <CheckCircle2 className="size-4" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-sm font-medium">
-              {friendlyDate(r.checkedInAt)}
-            </div>
-            <div className="text-xs text-muted-foreground mt-0.5">
-              {formatSLTime(r.checkedInAt)}
-            </div>
-          </div>
-          <Badge variant="outline" className="shrink-0 font-normal">
-            {sourceLabel(r.source)}
-          </Badge>
-        </div>
-      ))}
-      {hasMore && (
-        <div className="flex justify-center pt-1">
-          <Button
-            variant="ghost"
-            size="sm"
+    <div>
+      {/* Section header with a reference-style "View all" that expands the
+          list in place. Only shown when there's more than the initial set. */}
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <h2 className="text-lg font-semibold">{title}</h2>
+        {hasMore && (
+          <button
+            type="button"
             onClick={() => setExpanded((e) => !e)}
-            className="text-muted-foreground hover:text-foreground"
+            className="text-sm font-medium text-sky-400 transition-colors hover:text-sky-300"
           >
-            {expanded ? (
-              <>
-                <ChevronUp className="size-4" />
-                Show less
-              </>
-            ) : (
-              <>
-                <ChevronDown className="size-4" />
-                Show all {rows.length} check-ins
-              </>
-            )}
-          </Button>
+            {expanded ? "Show less" : "View all"}
+          </button>
+        )}
+      </div>
+
+      {rows.length === 0 ? (
+        <div className="rounded-xl border bg-card px-4 py-8 text-center">
+          <div className="size-12 rounded-full bg-muted/50 text-muted-foreground inline-flex items-center justify-center mb-3">
+            <CheckCircle2 className="size-6" />
+          </div>
+          <p className="text-sm font-medium">No check-ins yet</p>
+          <p className="text-xs text-muted-foreground mt-1 max-w-xs mx-auto">
+            Type your Gym ID at the front-desk kiosk to mark your first
+            attendance.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-2.5">
+          {visible.map((r) => (
+            <div
+              key={r.id}
+              className="relative rounded-xl border bg-card p-3 pl-5"
+            >
+              {/* Left accent bar (reference style) — emerald for a check-in. */}
+              <span
+                aria-hidden
+                className="absolute left-2 inset-y-3 w-1 rounded-full bg-emerald-500"
+              />
+              <div className="flex items-start gap-3">
+                <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-500">
+                  <CheckCircle2 className="size-4" />
+                </div>
+                <div className="flex min-w-0 flex-1 items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-semibold">
+                      {friendlyDate(r.checkedInAt)}
+                    </div>
+                    <div className="mt-0.5 text-xs text-muted-foreground">
+                      {formatSLTime(r.checkedInAt)}
+                    </div>
+                  </div>
+                  <Badge variant="outline" className="shrink-0 font-normal">
+                    {sourceLabel(r.source)}
+                  </Badge>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>

@@ -483,8 +483,7 @@ export default async function PortalHome() {
           (Today / Yesterday / N days ago). Same activity-row pattern
           used by Strava / Apple Fitness. Show-more caps initial render. */}
       <section>
-        <h2 className="text-lg font-semibold mb-3">Recent activity</h2>
-        <RecentActivity rows={attendanceRows} />
+        <RecentActivity rows={attendanceRows} title="Recent activity" />
       </section>
 
       {/* PAYMENT HISTORY — Stripe-style cards: amount as the
