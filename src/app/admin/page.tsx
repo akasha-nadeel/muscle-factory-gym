@@ -220,16 +220,16 @@ export default async function AdminHome() {
             <RecordPaymentModal className="flex-1 sm:flex-initial" />
             <Button
               variant="outline"
-              size="sm"
+              size="lg"
               render={<Link href="/admin/pending" />}
               className={cn(
-                "relative flex-1 sm:flex-initial",
+                "relative flex-1 sm:flex-initial h-9 px-5",
                 pendingCount > 0
                   ? // Has work to do: amber accent draws the admin's eye without
-                    // competing with the orange primary CTA next to it.
+                    // competing with the green primary CTA next to it.
                     "bg-amber-50 border-amber-500/50 text-amber-900 hover:bg-amber-100 hover:border-amber-500/70 dark:bg-amber-950/30 dark:border-amber-500/40 dark:text-amber-100 dark:hover:bg-amber-950/50"
                   : // All caught up: neutral surface with subtle fill so it
-                    // stands on its own next to the orange primary instead of
+                    // stands on its own next to the green primary instead of
                     // looking ghosted in dark mode.
                     "bg-card hover:bg-muted dark:bg-card dark:hover:bg-muted/50",
               )}

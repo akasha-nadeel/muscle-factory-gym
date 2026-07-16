@@ -54,10 +54,13 @@ export function RecordPaymentModal({
   return (
     <>
       <Button
-        size="sm"
+        size="lg"
         onClick={() => setOpen(true)}
         className={cn(
-          "bg-orange-600 text-white hover:bg-orange-700 dark:bg-orange-600 dark:hover:bg-orange-500",
+          // Green — payments are the app's positive/money accent (matches the
+          // green Total-paid stat + membership payment cards). px-5 gives the
+          // primary CTA real presence next to the dashboard heading.
+          "h-9 px-5 bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500",
           className,
         )}
       >
