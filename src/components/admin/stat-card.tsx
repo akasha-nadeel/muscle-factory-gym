@@ -110,6 +110,7 @@ export function StatCard({
   label,
   value,
   caption,
+  badge,
   accentColor = "default",
   variant = "row",
   className,
@@ -118,6 +119,9 @@ export function StatCard({
   label: string;
   value: string | number;
   caption?: string;
+  /** Small pill shown top-right of the "stack" variant (e.g. a countdown).
+   *  Keeps the card's label + value layout identical to badge-less cards. */
+  badge?: string;
   accentColor?: StatCardAccent;
   /** "row": compact icon-left layout (admin). "stack": icon-on-top,
    *  uniform dark card with a vivid icon tile (portal / reference style). */
@@ -134,13 +138,20 @@ export function StatCard({
           className,
         )}
       >
-        <div
-          className={cn(
-            "flex size-9 items-center justify-center rounded-xl",
-            iconBgSolid[accentColor],
+        <div className="flex items-start justify-between gap-2">
+          <div
+            className={cn(
+              "flex size-9 items-center justify-center rounded-xl",
+              iconBgSolid[accentColor],
+            )}
+          >
+            <Icon className="size-5" />
+          </div>
+          {badge && (
+            <span className="shrink-0 rounded-full bg-muted/70 px-2 py-0.5 text-[0.65rem] font-medium text-muted-foreground">
+              {badge}
+            </span>
           )}
-        >
-          <Icon className="size-5" />
         </div>
         <div className="min-w-0">
           <div className="truncate text-xs text-muted-foreground">{label}</div>
@@ -152,11 +163,6 @@ export function StatCard({
           >
             {value}
           </div>
-          {caption && (
-            <div className="mt-1 line-clamp-2 text-[0.7rem] text-muted-foreground">
-              {caption}
-            </div>
-          )}
         </div>
       </div>
     );

@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { CheckCircle2 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { formatSLDate, formatSLTime } from "@/lib/tz";
+import { cn } from "@/lib/utils";
 
 const INITIAL_VISIBLE = 5;
 
@@ -18,6 +18,13 @@ function sourceLabel(s: AttendanceRow["source"]): string {
   if (s === "qr_scan") return "QR scan";
   return "Manual";
 }
+
+// A distinct tinted pill per check-in source so they read apart at a glance.
+const sourceStyle: Record<AttendanceRow["source"], string> = {
+  qr_scan: "bg-sky-500/15 text-sky-400 border-sky-500/30",
+  kiosk_id: "bg-violet-500/15 text-violet-400 border-violet-500/30",
+  manual: "bg-amber-500/15 text-amber-400 border-amber-500/30",
+};
 
 /**
  * Friendly relative date label: "Today" / "Yesterday" / "Mar 15, 2026".
@@ -103,9 +110,14 @@ export function RecentActivity({
                       {formatSLTime(r.checkedInAt)}
                     </div>
                   </div>
-                  <Badge variant="outline" className="shrink-0 font-normal">
+                  <span
+                    className={cn(
+                      "shrink-0 rounded-full border px-2 py-0.5 text-[0.7rem] font-medium",
+                      sourceStyle[r.source],
+                    )}
+                  >
                     {sourceLabel(r.source)}
-                  </Badge>
+                  </span>
                 </div>
               </div>
             </div>

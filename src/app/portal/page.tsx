@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import {
   FileText, Eye, Download,
   Wallet, AlertCircle, Activity, Calendar as CalendarIcon,
-  Sparkles, AlertTriangle,
+  CalendarClock, Sparkles, AlertTriangle,
 } from "lucide-react";
 import { StatCard } from "@/components/admin/stat-card";
 import { StatusPill } from "@/components/admin/status-pill";
@@ -229,6 +229,12 @@ export default async function PortalHome() {
       })
     : null;
 
+  // Whole days from today until that next payment is due (clamped at 0).
+  const daysToNextPayment =
+    nextPaymentDue != null
+      ? Math.max(0, daysRemaining({ today, endDate: nextPaymentDue }))
+      : null;
+
   // Greeting based on time of SL day — small personalization touch that
   // makes the portal feel less institutional.
   const hour = new Date(
@@ -300,33 +306,34 @@ export default async function PortalHome() {
         )}
       </section>
 
-      {/* Plan strip — its own glass card now, separated from the hero so
-          it reads as structured info rather than part of the personal
-          identity card. */}
+      {/* Plan card — the membership's headline info, elevated to match the
+          stat/payment cards: a sky-tinted gradient surface, a solid icon
+          tile, a prominent plan name, and a divided "next due" row. */}
       {current && (
-        <div className="flex items-start sm:items-center gap-3 rounded-2xl bg-card/60 backdrop-blur-sm border px-4 py-3.5">
-          <div className="size-9 rounded-lg bg-sky-500/15 text-sky-500 flex items-center justify-center shrink-0 mt-0.5 sm:mt-0">
-            <CalendarIcon className="size-4" />
-          </div>
-          <div className="flex-1 min-w-0 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-            <div className="min-w-0">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                Current plan
+        <div className="rounded-2xl border bg-gradient-to-br from-violet-500/10 via-card to-card p-4 sm:p-5">
+          <div className="flex items-center gap-3.5">
+            <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-violet-500 text-white shadow-sm">
+              <CalendarIcon className="size-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[0.7rem] font-medium uppercase tracking-wide text-muted-foreground">
+                Membership
               </p>
-              <p className="text-sm font-semibold truncate">
+              <p className="truncate text-lg font-semibold leading-tight">
                 {current.planName}
               </p>
             </div>
-            <div className="min-w-0 sm:text-right">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                {nextPaymentDue ? "Next due" : "Days remaining"}
-              </p>
-              <p className="text-sm font-semibold tabular-nums">
-                {nextPaymentDue
-                  ? format(parseISO(nextPaymentDue), "MMM d, yyyy")
-                  : `${daysLeft ?? 0} day${daysLeft === 1 ? "" : "s"}`}
-              </p>
-            </div>
+          </div>
+          <div className="mt-4 flex items-center justify-between gap-3 border-t border-border/50 pt-3.5">
+            <span className="inline-flex items-center gap-1.5 text-[0.7rem] font-medium uppercase tracking-wide text-muted-foreground">
+              <CalendarClock className="size-3.5" />
+              {nextPaymentDue ? "Next due" : "Days remaining"}
+            </span>
+            <span className="text-sm font-semibold tabular-nums">
+              {nextPaymentDue
+                ? format(parseISO(nextPaymentDue), "MMM d, yyyy")
+                : `${daysLeft ?? 0} day${daysLeft === 1 ? "" : "s"}`}
+            </span>
           </div>
         </div>
       )}
@@ -455,7 +462,13 @@ export default async function PortalHome() {
             variant="stack"
             icon={CalendarIcon}
             label="Plan"
-            value={current?.planName ?? "—"}
+            value={
+              daysToNextPayment == null
+                ? "—"
+                : daysToNextPayment === 0
+                  ? "Due today"
+                  : `Due in ${daysToNextPayment}d`
+            }
             accentColor="blue"
           />
           <StatCard

@@ -2,9 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
+import { clerkClient } from "@clerk/nextjs/server";
 import { db } from "@/db";
-import { memberships, payments, plans } from "@/db/schema";
+import { memberships, payments, plans, profiles } from "@/db/schema";
 import { todayInSL } from "@/lib/tz";
+import { normalizeAvatarUrl } from "@/lib/profiles/photo";
 import {
   _evaluateByGymIdUnsafe,
   _recordAttendanceByMemberIdUnsafe,
@@ -124,6 +126,36 @@ async function withFinancials(
   };
 }
 
+/**
+ * Replace the member's DB-stored photo with their CURRENT Clerk avatar.
+ *
+ * The DB `photoUrl` only updates via the Clerk `user.updated` webhook, which
+ * lags in production and never fires on localhost — so a member who just
+ * changed their photo in the portal would still see the old one at the kiosk.
+ * Reading it live from Clerk keeps the confirm screen in sync. Non-fatal: any
+ * failure (Clerk unreachable, user missing) falls back to the DB value.
+ *
+ * Applied only in the public entry points below — NOT in withFinancials —
+ * so the `_*Unsafe` test helpers never make Clerk API calls.
+ */
+async function withLivePhoto(member: CheckinMember): Promise<CheckinMember> {
+  try {
+    const [prof] = await db
+      .select({ clerkUserId: profiles.clerkUserId })
+      .from(profiles)
+      .where(eq(profiles.id, member.memberId))
+      .limit(1);
+    if (prof?.clerkUserId) {
+      const client = await clerkClient();
+      const u = await client.users.getUser(prof.clerkUserId);
+      return { ...member, photoUrl: normalizeAvatarUrl(u.imageUrl) };
+    }
+  } catch (e) {
+    console.warn("checkin: live Clerk photo fetch failed; using DB photo", e);
+  }
+  return member;
+}
+
 function parseGymId(raw: string): number | null {
   const trimmed = raw.trim();
   if (!/^\d+$/.test(trimmed)) return null;
@@ -185,7 +217,11 @@ export async function _confirmCheckinUnsafe(input: {
 export async function previewGymId(
   gymIdRaw: string,
 ): Promise<SubmitGymIdResult> {
-  return _previewGymIdUnsafe({ gymIdRaw, todaySL: todayInSL() });
+  const result = await _previewGymIdUnsafe({ gymIdRaw, todaySL: todayInSL() });
+  if (result.ok) {
+    return { ok: true, member: await withLivePhoto(result.member) };
+  }
+  return result;
 }
 
 /** Step 2 form entry — records attendance after the member confirms. */
@@ -196,6 +232,7 @@ export async function confirmCheckin(
   if (result.ok) {
     revalidatePath(`/admin/members/${result.member.memberId}`);
     revalidatePath("/portal");
+    return { ok: true, member: await withLivePhoto(result.member) };
   }
   return result;
 }
