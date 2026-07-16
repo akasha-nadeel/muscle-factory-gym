@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { requireMember, getCurrentProfile } from "@/lib/auth";
 import { currentUser } from "@clerk/nextjs/server";
-import { PortalAccountMenu } from "@/components/portal/account-menu";
+import { AccountPill } from "@/components/account-pill";
 import { displayName } from "@/lib/profiles/display-name";
 import { normalizeAvatarUrl } from "@/lib/profiles/photo";
 
@@ -50,21 +50,14 @@ export default async function PortalLayout({
               className="h-5 sm:h-[34px] w-auto"
             />
           </Link>
-          {/* Identity pill (reference layout): avatar on the left, then the
-              name with a subtitle (Gym ID) stacked to the right. Text
-              truncates so the pill stays compact next to the logo on
-              mobile. Only the avatar is interactive — it opens the menu. */}
-          <div className="flex items-center gap-1.5 sm:gap-2 rounded-full border border-border/60 bg-card py-0.5 pl-2.5 pr-0.5 sm:pl-3 sm:pr-1 shadow-sm">
-            <div className="flex min-w-0 flex-col items-end leading-tight text-right">
-              <span className="truncate text-[0.72rem] sm:text-[0.8rem] font-medium text-foreground max-w-[92px] sm:max-w-[160px]">
-                {name}
-              </span>
-              <span className="truncate text-[0.62rem] sm:text-[0.7rem] text-muted-foreground max-w-[92px] sm:max-w-[160px]">
-                {handle}
-              </span>
-            </div>
-            <PortalAccountMenu name={name} email={email} imageUrl={avatarUrl} />
-          </div>
+          {/* Identity pill — name + Gym ID subtitle with the account avatar
+              (and its menu) on the right. Shared with the admin top bar. */}
+          <AccountPill
+            name={name}
+            subtitle={handle}
+            email={email}
+            imageUrl={avatarUrl}
+          />
         </header>
         <main className="flex-1 overflow-y-auto">
           <div className="max-w-5xl mx-auto w-full p-4 md:p-6">{children}</div>
