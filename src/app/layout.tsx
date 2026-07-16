@@ -53,6 +53,14 @@ export default function RootLayout({
           // app's --primary, so Clerk's buttons/links match the rest of it.
           colorPrimary: "#dc2626",
         },
+        elements: {
+          // The appearance `variables` for text-on-primary were ignored by
+          // the theme (it kept auto-computing a dark foreground for our red),
+          // so force white directly on the primary button + its children.
+          // Clerk components render inline in our DOM, so Tailwind reaches
+          // them; `!` makes it win over Clerk's inline style.
+          formButtonPrimary: "text-white! [&_*]:text-white!",
+        },
       }}
     >
       {/* The app is dark-only. `dark` is applied statically here (server
