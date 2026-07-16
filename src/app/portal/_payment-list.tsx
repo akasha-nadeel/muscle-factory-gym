@@ -23,19 +23,15 @@ function methodLabel(m: PaymentRow["method"]): string {
   return "Cash";
 }
 
-// Accent bar + icon tint keyed off the payment status — the colour cue the
-// reference cards use down their left edge.
-const statusAccent: Record<
-  PaymentRow["status"],
-  { bar: string; icon: string }
-> = {
-  succeeded: { bar: "bg-emerald-500", icon: "bg-emerald-500/15 text-emerald-500" },
-  pending: { bar: "bg-amber-500", icon: "bg-amber-500/15 text-amber-500" },
-  failed: { bar: "bg-rose-500", icon: "bg-rose-500/15 text-rose-500" },
-  refunded: {
-    bar: "bg-muted-foreground/40",
-    icon: "bg-muted text-muted-foreground",
+// Accent bar + icon tint keyed off the payment KIND — the status is already
+// conveyed by the pill on the right, so the left-edge colour distinguishes
+// membership (green) from the one-time admission fee (amber).
+const kindAccent: Record<PaymentRow["kind"], { bar: string; icon: string }> = {
+  membership: {
+    bar: "bg-emerald-500",
+    icon: "bg-emerald-500/15 text-emerald-500",
   },
+  admission: { bar: "bg-amber-500", icon: "bg-amber-500/15 text-amber-500" },
 };
 
 export function PaymentList({
@@ -83,7 +79,7 @@ export function PaymentList({
         const num = Number(p.amountLkr);
         const isNegative = num < 0;
         const isRefunded = p.status === "refunded";
-        const accent = statusAccent[p.status];
+        const accent = kindAccent[p.kind];
         const Icon = p.kind === "admission" ? Ticket : CalendarCheck;
         return (
           <div
